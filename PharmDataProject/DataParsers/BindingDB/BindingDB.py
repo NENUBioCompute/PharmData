@@ -6,7 +6,7 @@
   @function
 """
 import json
-from PharmRGProject.Utilities.Database.dbutils import DBconnection
+from PharmDataProject.Utilities.Database.dbutils import DBconnection
 import csv
 import collections
 import configparser

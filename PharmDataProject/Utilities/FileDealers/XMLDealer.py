@@ -7,7 +7,7 @@
 from typing import Optional
 
 from xml.etree import ElementTree as ET
-from PharmRGProject.Utilities.FileDealers.FileSystem import *
+from PharmDataProject.Utilities.FileDealers.FileSystem import *
 import xmltodict
 
 
