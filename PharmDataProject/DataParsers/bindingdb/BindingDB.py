@@ -16,7 +16,7 @@ cfgfile = "../../conf/drugkb.config"
 config.read(cfgfile)
 
 target_fields = [
-    'BindingDB Target Chain  Sequence',
+    'bindingdb Target Chain  Sequence',
     'PDB ID(s) of Target Chain',
     'UniProt (SwissProt) Recommended Name of Target Chain',
     'UniProt (SwissProt) Entry Name of Target Chain',
