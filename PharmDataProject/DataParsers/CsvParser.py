@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+# @Author   : Deepwind
+# @Time     : 2023/9/25
+# @File     : Csvparser.py
+# @Project  : PharmRG
+
 import logging
 import time
 import pymongo
