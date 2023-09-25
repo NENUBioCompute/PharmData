@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+# developer   ：zhangkeming
+# date   ：2023/9/25  16:31
 import xlrd2
 import json
 from pymongo import MongoClient
@@ -10,17 +13,19 @@ class DataParsers:
         self.list2=list2
         self.file_url=file_url
         self.db=db
+
+    # this function is used when every line data is a data collection
     def import_inline(self):
-        # 连接数据库
+        # connect the database
         client = MongoClient(host=self.db.host, port=self.db.port,username=self.db.username,password=self.db.password)
         db = client[self.db.dbname]
         collection = self.db.collection
 
-        # 读取Excel文件
+        # read Excel file
         data = xlrd2.open_workbook(self.file_url)
         table = data.sheets()[0]
 
-        # 读取excel第一行数据作为存入mongodb的字段名
+        # read the first line data of Excel the as field name of mongodb
         row_stag = table.row_values(0)
         n_rows = table.nrows
         return_data = {}
@@ -28,15 +33,14 @@ class DataParsers:
         save_size = 0
         save_collection = []
         for i in range(1, n_rows):
-            # 将字段名和excel数据存储为字典形式，并转换为json格式
+            # deposit field name and excel data as dictionary type and transform into json type
             return_data[i] = json.dumps(dict(zip(row_stag, table.row_values(i))))
-            # 通过编解码还原数据
+            # Restore the data by encoding it
             return_data[i] = json.loads(return_data[i])
-            # 转换表头为所需字段名
-            # del return_data[i]['序号']
+            # transform tabel head into field name
             for j in self.list1:
                  return_data[i][j] = return_data[i].pop(j)
-
+            # Whenever the data volume reaches 1,000 insert them into database
             save_collection.insert(save_size, return_data[i])
             if save_size >= 1000:
                 db[collection].insert_many(save_collection)
@@ -46,48 +50,51 @@ class DataParsers:
                 save_size += 1
 
         db[collection].insert_many(save_collection)
+    # this function is used when field need to deposit list type data
     def import_list(self):
-        # 连接数据库
+        # connect database
         client = MongoClient(host=self.db.host, port=self.db.port, username=self.db.username, password=self.db.password)
         db = client[self.db.dbname]
         collection = self.db.collection
 
-        # 读取Excel文件
+        # read Excel file
         data = xlrd2.open_workbook(self.file_url)
         table = data.sheets()[0]
 
-        # 读取excel第一行数据作为存入mongodb的字段名
         row_stag = table.row_values(0)
         n_rows = table.nrows
         return_data = {}
-        # 原始数据
-        #数据集合计数器
+        # data connection count
         k = 0
 
         save_collection = []
-        # 缓冲list
+        # buffer list
         return_data2 = {}
-        # 上传数据
+
         for i in range(1, n_rows):
-            # 将字段名和excel数据存储为字典形式，并转换为json格式
+            # deposit field name and excel data as dictionary type and transform into json type
             return_data[i] = json.dumps(dict(zip(row_stag, table.row_values(i))))
-            # 通过编解码还原数据
+            # Restore the data by encoding it
             return_data[i] = json.loads(return_data[i])
             return_data2[k + 1] = {}
 
-            # 对于唯一标识的数据进行归纳
+            # Generinduction for the unique identity of the data
+
+            # every Excel data collection has a line of null in front of it,so the count add 1 when read null
             if return_data[i][self.signal] == '':
                 k += 1
+                # initialize the field
                 for j in self.list1:
                     return_data2[k][j] = ''
                 for j in self.list2:
                     return_data2[k][j] = []
+                # if read the field name of our list,deposit the data into the field
             for j in self.list1:
                 if j == return_data[i]['KEY']:
                     return_data2[k][j] = return_data[i].pop('VALUE')
             for j in self.list2:
                 if j == return_data[i]['KEY']:
-                    # 对于特殊数据的处理
+                    # Some fields need to be trimmed or spliced,do special treatment according to the case
                     if j=='DRUGINFO':
                         return_data2[k][j].append(return_data[i].pop('VALUE')+' '+return_data[i].pop('DRUGNAME')+' '+return_data[i].pop('Highest Clinical Status'))
                     elif j == 'INDICATI':

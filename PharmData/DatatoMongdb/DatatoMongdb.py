@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+# developer   ：zhangkeming
+# date   ：2023/9/25  16:31
 class DatatoMongdb:
     def __init__(self,host,port,username,password,
                  dbname,collection):
