@@ -5,6 +5,7 @@ import xlrd2
 import json
 from pymongo import MongoClient
 import DatatoMongdb
+import sys
 
 class DataParsers:
     def __init__(self,signal,list1,list2,file_url,db:DatatoMongdb):
@@ -17,13 +18,19 @@ class DataParsers:
     # this function is used when every line data is a data collection
     def import_inline(self):
         # connect the database
-        client = MongoClient(host=self.db.host, port=self.db.port,username=self.db.username,password=self.db.password)
-        db = client[self.db.dbname]
-        collection = self.db.collection
+        try:
+            client = MongoClient(host=self.db.host, port=self.db.port,username=self.db.username,password=self.db.password)
+            db = client[self.db.dbname]
+            collection = self.db.collection
+        except:
+            sys.stderr.write("Error: There is wrong in database connection.")
 
         # read Excel file
-        data = xlrd2.open_workbook(self.file_url)
-        table = data.sheets()[0]
+        try:
+            data = xlrd2.open_workbook(self.file_url)
+            table = data.sheets()[0]
+        except:
+            sys.stderr.write("Error: There is wrong in reading excel file.")
 
         # read the first line data of Excel the as field name of mongodb
         row_stag = table.row_values(0)
@@ -43,7 +50,10 @@ class DataParsers:
             # Whenever the data volume reaches 1,000 insert them into database
             save_collection.insert(save_size, return_data[i])
             if save_size >= 1000:
-                db[collection].insert_many(save_collection)
+                try:
+                    db[collection].insert_many(save_collection)
+                except:
+                    sys.stderr.write("Error: There is wrong in updating data to database.")
                 save_size = 0
                 save_collection.clear()
             else:
@@ -53,13 +63,19 @@ class DataParsers:
     # this function is used when field need to deposit list type data
     def import_list(self):
         # connect database
-        client = MongoClient(host=self.db.host, port=self.db.port, username=self.db.username, password=self.db.password)
-        db = client[self.db.dbname]
-        collection = self.db.collection
+        try:
+            client = MongoClient(host=self.db.host, port=self.db.port, username=self.db.username, password=self.db.password)
+            db = client[self.db.dbname]
+            collection = self.db.collection
+        except:
+            sys.stderr.write("Error: There is a wrong in database connection.")
 
         # read Excel file
-        data = xlrd2.open_workbook(self.file_url)
-        table = data.sheets()[0]
+        try:
+            data = xlrd2.open_workbook(self.file_url)
+            table = data.sheets()[0]
+        except:
+            sys.stderr.write("Error: There is a wrong in reading excel file.")
 
         row_stag = table.row_values(0)
         n_rows = table.nrows
@@ -103,7 +119,10 @@ class DataParsers:
                     else:
                         return_data2[k][j].append(return_data[i].pop('VALUE'))
         for t in range(1, k):
-            save_collection.insert(t, return_data2[t])
+            try:
+                save_collection.insert(t, return_data2[t])
+            except:
+                sys.stderr.write("Error: There is a wrong in updating data to database.")
             if t % 1000 == 0:
                 db[collection].insert_many(save_collection)
                 save_collection.clear()
