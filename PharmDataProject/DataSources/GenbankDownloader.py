@@ -1,38 +1,44 @@
-import wget
+"""
+  -*- encoding: utf-8 -*-
+  @Author: wangyang
+  @Time  : 2023/10/04 19:38
+  @Email: 2168259496@qq.com
+  @function
+"""
+import requests
+import patoolib
 import os
-import configparser
+class GenebankDownloader:
 
-class GenbankDownloader:
-    def __init__(self):
-        pass
+    """
 
-    def mkdir(self, path):
-        # 确保目录存在
-        if not os.path.exists(path):
-            os.makedirs(path)
-        return path
 
-    def download_to_data(self, url, path):
-        """
-        下载文件，存入相应的文件目录下
-        :param url: 下载地址
-        :param path: 存储地址
-        :return:
-        """
-        print(path.split('/')[-2], "正在下载...")
-        # 确保目录存在
-        complete_path = self.mkdir(path)
-        obj = os.path.join(complete_path, url.split('/')[-1])
-        wget.download(url, obj)
-        print("下载完成！\n")
+    """
 
-if __name__ == '__main__':
-    config = configparser.ConfigParser()
-    cfgfile = '../conf/drugkb.config'
-    config.read(cfgfile)
+    def __init__(self, url_info: str = "https://ftp.ncbi.nih.gov/gene/DATA/gene_info.gz", url_pubmed: str = "https://ftp.ncbi.nih.gov/gene/DATA/gene2pubmed.gz",
+                 dest_path: str = None):
 
-    downloader = GenbankDownloader()  # 创建 GenbankDownloader 类的实例
+        self.url_info= url_info
+        self.url_pubmed = url_pubmed
+        self.info_path = dest_path+"/gene_info.gz"
+        self.pubmed_path = dest_path+"/gene2pubmed.gz"
+        self.dest_path = dest_path
 
-    # 通过实例调用方法
-    downloader.download_to_data(config.get('genebank', 'source_url_2'),
-                                config.get('genebank', 'data_path_2'))
+    def extract_rar(self, file_path, dest_path):
+        patoolib.extract_archive(file_path, outdir=dest_path)
+
+
+    def download(self, url, file_path, dest_path) -> None:
+
+        response = requests.get(url, stream=True)
+        with open(file_path, 'wb') as file:
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    file.write(chunk)
+        self.extract_rar(file_path, dest_path)
+        os.remove(file_path)
+
+
+    def genebank_download(self) -> None:
+        self.download(self.url_pubmed, self.pubmed_path, self.dest_path)
+        self.download(self.url_info, self.info_path, self.dest_path)
