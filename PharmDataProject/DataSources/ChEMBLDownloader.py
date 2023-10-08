@@ -2,6 +2,7 @@
 """
 # @Time        : 2023/10/8
 # @Author      : yvshilin
+# @email       : 3542804395@qq.com
 # @FileName    : ChEMBLDownloader.py
 # @Software    : PyCharm
 # @ProjectName : ChEMBL
