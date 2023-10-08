@@ -86,7 +86,7 @@ def save_mongodb(path, db):
 
 
 if __name__ == '__main__':
-    path = '../data/bindingDB/BindingDB_All_202309.tsv'
+    path = config.get('bindingdb', 'path')
     db = DBconnection(cfgfile, config.get('bindingdb', 'db_name'), config.get('bindingdb', 'col_name_1'))
     save_mongodb(path, db)
     save_json(path=path, save_path=config.get('bindingdb', 'data_path_1'))
