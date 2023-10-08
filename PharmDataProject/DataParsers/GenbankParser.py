@@ -75,7 +75,7 @@ class GenbankParsers:
                         if len(data) >= 100000:
                             writer.writerows(data)
                             data = []
-                        # # 插入剩余的数据
+                     
                     if data:
                         writer.writerows(data)
 
