@@ -25,8 +25,8 @@ class BindingdbtoMongo:
 
     Methods:
         - assure_empty(): Empty the specified collection in the database. If db_check is set to True, this method is called before the data is automatically inserted.
-        - insert(self, data: iter, buffer_size=10000, accelerate=False, counter=False): Inserts data from the specified csv file into the corresponding collection.
-        - auto_insert(): Automatically converts all given csv files to MongoDB collections.
+        - insert(data: iter, buffer_size=10000, accelerate=False, counter=False): Inserts data from the specified csv file into the corresponding collection.
+        - clear_collection(): Clear collection
     """
 
     def __init__(self, collection_name: str, db_name: str, db_url: str = "localhost", port: int = 27017,
