@@ -73,13 +73,13 @@ class FindAndAnalyzeData:
         if num == 0:
             try:
                 value = list[0][key]
-                return value
+                return value or default
             except (TypeError, KeyError):
                 return default
         else:
             try:
                 value = list[key]
-                return value
+                return value or default
             except (TypeError, KeyError):
                 return default
 
