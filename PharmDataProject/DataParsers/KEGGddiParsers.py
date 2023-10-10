@@ -6,7 +6,7 @@
   @function
 """
 import requests
-from PharmDataProject.DataSources.getId import GetId
+from PharmDataProject.DataSources.KEGGDownloader import GetId
 from PharmDataProject.DatatoMongo.KEGGtoMongo import dataSave
 
 
