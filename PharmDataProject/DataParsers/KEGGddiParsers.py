@@ -6,8 +6,8 @@
   @function
 """
 import requests
-from PharmData.PharmDataProject.DataSources.getId import GetId
-from PharmData.PharmDataProject.DatatoMongo.KEGGtoMongo import dataSave
+from PharmDataProject.DataSources.getId import GetId
+from PharmDataProject.DatatoMongo.KEGGtoMongo import dataSave
 
 
 class DdiData:
