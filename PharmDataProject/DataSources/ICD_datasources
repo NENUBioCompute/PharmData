@@ -1,0 +1,8 @@
+import pandas as pd
+from pymongo import MongoClient
+import pprint
+
+# Step 1: Read Excel file and convert to dict
+file_url = "https://raw.githubusercontent.com/HTX2023/ICD/main/ICDcode.xlsx"  # GitHub direct link to the Excel file
+data = pd.read_excel(file_url)
+icd_dict = data.set_index(data.columns[0]).T.to_dict('records')[0]
