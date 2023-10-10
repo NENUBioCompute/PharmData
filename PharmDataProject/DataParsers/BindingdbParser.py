@@ -48,8 +48,8 @@ class BindingdbParser:
 
     def parse(self) -> iter:
         """
-        对指定CSV文件中的数据进行解析。
-        :return: None
+        Parses the data in the specified CSV file.
+        :return: iter
         """
         with open(self.csv_path, 'r', newline=self.csv_property["newline"],
                   encoding=self.csv_property["encoding"]) as csvfile:
@@ -68,10 +68,10 @@ class BindingdbParser:
                                          i not in [header.index(field) for field in self.removed_fields]]
                 except ValueError as e:
                     logging.warning(e)
-                    raise ValueError("指定的字段不存在") from e
+                    raise ValueError("The specified field does not exist") from e
 
             header = [header[i] for i in field_allowed]
-            logging.info(f"保留的字段为{header}")
+            logging.info(f"The reserved field is {header}")
             for row in db_reader:
                 drug = dict(zip(header, [row[i] for i in field_allowed]))
                 yield drug
