@@ -36,7 +36,7 @@ def scrape_and_save_data(url):
         headers = table.find_all("th")
         header_row = [header.text.strip() for header in headers]
 
-        # 获取表格标题
+        
         title = table.find_previous_sibling("h2")
         if title:
             title = title.text.strip()
