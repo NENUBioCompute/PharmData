@@ -9,7 +9,7 @@ from pymongo.collection import Collection
 from pymongo.database import Database
 
 from PharmDataProject.DataParsers.KEGGParsers import Parse
-from PharmDataProject.DataSources.getId import GetId
+from PharmDataProject.DataSources.KEGGDownloader import GetId
 
 
 class dataSave:
@@ -24,23 +24,8 @@ class dataSave:
         collection.insert_many(info)
 
 if __name__ == "__main__":
-    # with open('../../json/H01476.json') as f:
-    #     data=json.load(f)
-    # dataSave.save(data,"PharmRG","117.73.10.251",27017,"KEGG_Disease","readwrite","readwrite")
-    items = GetId.get_id("compound")
-    i=415
-    for item in items[415:]:
-        url='https://rest.kegg.jp/get/'+item
-        s = requests.session()
-        s.headers = headers
-        record = s.get(url)
-        # record = REST.kegg_get(item)
-        data = record.read()
-        entries = data.strip().split("\n///\n")
-        #     # 装到一个JSON格式
-        json_data = Parse.convert_to_json(entries)
+    with open('../../json/H01476.json') as f:
+        data=json.load(f)
+    dataSave.save(data,"PharmRG","117.73.10.251",27017,"KEGG_Disease","readwrite","readwrite")
 
-        dataSave.save(json_data, "PharmRG", "59.73.198.168", 27017, "KEGG_Compound", "readwrite", "readwrite")
-        i+=1
-        print(i)
 
