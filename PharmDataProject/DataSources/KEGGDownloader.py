@@ -8,8 +8,8 @@
 from wsgiref import headers
 import requests
 from Bio.KEGG import REST
+from PharmDataProject.DatatoMongo.KEGGtoMongo import KEGGtoMongo
 from PharmDataProject.DataParsers.KEGGParsers import Parse
-from PharmDataProject.DatatoMongo.KEGGtoMongo import dataSave
 
 
 class KEGGDownloader:
@@ -23,10 +23,10 @@ class KEGGDownloader:
             items.append(ids)
         return items
 
-    def download(self):
-        items = KEGGDownloader.get_id("compound")
-        # i = 415
-        for item in items[415:]:
+    def download(example, name):
+        items = KEGGDownloader.get_id(example)
+        for item in items:
+            print(item)
             url = 'https://rest.kegg.jp/get/' + item
             s = requests.session()
             s.headers = headers
@@ -38,12 +38,11 @@ class KEGGDownloader:
             #     # 装到一个JSON格式
             json_data = Parse.convert_to_json(entries)
 
-            dataSave.save(json_data, "PharmRG", "59.73.198.168", 27017, "KEGG_Compound", "readwrite", "readwrite")
-            # i += 1
-            return 0
+            KEGGtoMongo.save(json_data, "PharmRG", "59.73.198.168", 27017, name, "readwrite", "readwrite")
+        return 0
 
 
 if __name__ == "__main__":
     # drugs=KEGGDownloader.get_id('drug');
     # print(drugs)
-    KEGGDownloader.download()
+    KEGGDownloader.download("compound","KEGG_Compound")

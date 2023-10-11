@@ -6,8 +6,8 @@
   @function
 """
 import requests
-from PharmDataProject.DataSources.KEGGDownloader import GetId
-from PharmDataProject.DatatoMongo.KEGGtoMongo import dataSave
+from PharmDataProject.DataSources.KEGGDownloader import KEGGDownloader
+from PharmDataProject.DatatoMongo.KEGGtoMongo import KEGGtoMongo
 
 
 class DdiData:
@@ -46,7 +46,7 @@ class DdiData:
                     "interaction": result
                 }
 
-                dataSave.save(data_dict, "PharmRG", "59.73.198.168", 27017, "KEGG_DDI", "readwrite", "readwrite")
+                KEGGtoMongo.save(data_dict, "PharmRG", "59.73.198.168", 27017, "KEGG_DDI", "readwrite", "readwrite")
 
 
             except requests.exceptions.RequestException as e:
@@ -55,7 +55,7 @@ class DdiData:
 
 if __name__ == "__main__":
 
-     drugs=GetId.get_id("drug")
+     drugs=KEGGDownloader.get_id("drug")
      DdiData.ddi_parse(drugs);   #6700
 
 

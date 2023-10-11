@@ -9,10 +9,9 @@ from pymongo.collection import Collection
 from pymongo.database import Database
 
 from PharmDataProject.DataParsers.KEGGParsers import Parse
-from PharmDataProject.DataSources.KEGGDownloader import GetId
 
 
-class dataSave:
+class KEGGtoMongo:
     def save(info,db_name,host,port,collection_name, username, password):
         # username = "user"
         # password = "1234567890"
@@ -26,6 +25,6 @@ class dataSave:
 if __name__ == "__main__":
     with open('../../json/H01476.json') as f:
         data=json.load(f)
-    dataSave.save(data,"PharmRG","117.73.10.251",27017,"KEGG_Disease","readwrite","readwrite")
+    KEGGtoMongo.save(data,"PharmRG","117.73.10.251",27017,"KEGG_Disease","readwrite","readwrite")
 
 
