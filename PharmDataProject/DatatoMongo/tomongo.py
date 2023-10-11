@@ -1,36 +1,33 @@
-import requests
-from bs4 import BeautifulSoup
-import urllib.parse
+import json
+from pymongo import MongoClient
 import os
 
-def download_files_from_url():
-    # 目标网页的URL
-    url = "https://wikipathways-data.wmcloud.org/current/gpml/"
+def connect_to_mongodb():
+    client = MongoClient()
+    return client
 
-    # 发送HTTP请求获取网页内容
-    response = requests.get(url)
+def close_mongodb_connection(client):
+    client.close()
 
-    if response.status_code == 200:
-        # 解析HTML内容
-        soup = BeautifulSoup(response.text, 'html.parser')
+def insert_json_to_collection(collection, json_path):
+    with open(json_path, 'r', encoding='utf-8') as json_file:
+        json_content = json.load(json_file)
+        collection.insert_one(json_content)
 
-        # 提取资源链接
-        resource_links = []
+def insert_json_to_mongodb(json_dir):
+    client = connect_to_mongodb()
+    db = client['PharmRG']
+    collection = db['wikipathway']
 
-        for link in soup.find_all('a'):
-            href = link.get('href')
-            if href and not href.endswith('/'):  # 确保链接不是目录链接
-                resource_links.append(href)
+    for root, dirs, files in os.walk(json_dir):
+        for json_file in files:
+            if json_file.endswith('.json'):
+                json_path = os.path.join(root, json_file)
+                insert_json_to_collection(collection, json_path)
 
-        # 创建一个目录来存储下载的资源
-        download_directory = os.path.join(os.getcwd(), "downloaded_resources")
-        os.makedirs(download_directory, exist_ok=True)
+    close_mongodb_connection(client)
 
-        # 下载资源
-        for resource_link in resource_links:
-            full_resource_url = urllib.parse.urljoin(url, resource_link)
-            file_name = os.path.join(download_directory, resource_link.split("/")[-1])
-            urllib.request.urlretrieve(full_resource_url, file_name)
-            print(f"Downloaded: {file_name}")
-    else:
-        print("Failed to retrieve the webpage.")
+
+
+
+
