@@ -43,7 +43,5 @@ class GenebankDownloader:
         self.download(self.url_pubmed, self.pubmed_path, self.dest_path)
         self.download(self.url_info, self.info_path, self.dest_path)
 
-if __name__ == '__main__':
-    a = GenebankDownloader()
-    a.genebank_download()
+
 
