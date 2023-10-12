@@ -29,7 +29,7 @@ class DBconnection(object):
         config.read(self.cfgfile)
 
 
-        client = MongoClient(host=config.get('dbserver', 'host'), port=int(config.get('dbserver', 'port')))
+        # client = MongoClient(host=config.get('dbserver', 'host'), port=int(config.get('dbserver', 'port')))
         # db = client.admin
 
         # db.authenticate(config.get('dbserver', 'user'), config.get('dbserver', 'password'))
