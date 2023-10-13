@@ -11,13 +11,22 @@ import time
 import requests
 
 class GenbankParsers:
+    """
+    The GenbanParser class is used to combine gen_info file and gen_pubmed into one file to complete parsing
 
-    def __init__(self, file_path, dest_path):
+    Parameter:
+        - file_path: The directory where the gen_info and gen_pubmed are located
+        - dest_path: The address where you want to store the file, the default address is the current directory
+
+    Methods:
+        - genbank_parser: Combine gen_info file and gen_pubmed into one file to complete parsing
+    """
+    def __init__(self, file_path, dest_path: str = "."):
         self.info_path = file_path + "/gene_info"
         self.pubmed_path = file_path + "/gene2pubmed"
         self.dest_path = dest_path + "/genebank"
 
-    def GenebankParsers(self) -> None:
+    def genebank_parsers(self) -> None:
 
         with open(self.info_path, 'r') as tsvfile:
             gen_info = csv.DictReader(tsvfile, dialect='excel-tab')
