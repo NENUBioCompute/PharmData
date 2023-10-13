@@ -11,8 +11,15 @@ import os
 class GenebankDownloader:
 
     """
-    The GenbankDownloader class
+    The GenbankDownloader class is used to download Genbank's data
 
+    Parameters:
+        - url_info: The URL of the gen_info file provided by GenBank is not assigned when used
+        - url_pubmed: The URL of the gen_pubmed file provided by GenBank is not assigned when used
+        - dest_path: The address where you want to store the file, the default address is the current directory
+
+    Methods:
+        - genebank_download(): Download the gen_info file and gen_pubmed file to the destination folder
     """
 
     def __init__(self, url_info: str = "https://ftp.ncbi.nih.gov/gene/DATA/gene_info.gz", url_pubmed: str = "https://ftp.ncbi.nih.gov/gene/DATA/gene2pubmed.gz",
