@@ -20,7 +20,7 @@ cfgfile = "../conf/drugkb.config"
 config.read(cfgfile)
 
 
-def downloadTSV():
+def bindingdbDownloader():
     url = args.filename
 
     try:
@@ -45,7 +45,5 @@ if __name__ == '__main__':
         description='downloadFromDB.py, This class downloads TSV files from the bindingdb database')
     parser.add_argument('source_url_1', help='Request address')
     parser.add_argument('extract_dir', help='Specify the decompression directory')
-    # 直接传入,列表传入
     args = parser.parse_args([config.get('bindingdb', 'source_url_1'), '../data/bindingdb'])
-
-    downloadTSV()
+    bindingdbDownloader()
