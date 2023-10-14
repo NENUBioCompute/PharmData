@@ -1,10 +1,9 @@
-"""
-  -*- encoding: utf-8 -*-
-  @Author: zhaojingtong
-  @Time  : 2023/09/24 19:38
-  @Email: 2665109868@qq.com
-  @function
-"""
+'''
+@Author : gaoqingshan
+@Time   : 2023/10/8 17:33
+@Email  : 519546702@qq.com
+@function
+'''
 import json
 import configparser
 
