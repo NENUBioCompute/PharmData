@@ -10,7 +10,7 @@ import requests
 import subprocess
 from multiprocessing import Process
 from urllib import request, error
-from DrugMapProject.Utilities.FileDealers.FileSystem import *
+from PharmDataProject.Utilities.FileDealers.FileSystem import *
 
 class HTTP:
     """
