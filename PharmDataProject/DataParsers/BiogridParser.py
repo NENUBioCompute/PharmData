@@ -39,9 +39,9 @@ def to_csv(data_path):
                 snew[0] = 'ID Interactor A'
                 rownum = 1
 
-            if num ==5:
-            # print(row)
-                break
+            # if num ==5:
+            # # print(row)
+            #     break
             writer.writerow(snew)
 
 
@@ -55,9 +55,9 @@ def parse(data_path, json_path,db):
 
             # print(each)
             num = num + 1
-            if num == 5:
-            # print(each)
-                break
+            # if num == 5:
+            # # print(each)
+            #     break
             A = {}
             if each["Alt IDs Interactor A"] is not None:
                 if "|" in each["Alt IDs Interactor A"] and not each["Alt IDs Interactor A"] is None:
