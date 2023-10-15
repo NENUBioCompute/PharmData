@@ -29,7 +29,7 @@ class DBconnection(object):
         config.read(self.cfgfile)
 
         host = config.get('dbserver', 'host')
-        port = config.get('dbserver', 'port')
+        port = int(config.get('dbserver', 'port'))
         user = config.get('dbserver', 'user')
         password = config.get('dbserver', 'password')
         # db.authenticate(config.get('dbserver', 'user'), config.get('dbserver', 'password'))
