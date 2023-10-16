@@ -5,50 +5,43 @@
   @Email: 2168259496@qq.com
   @function
 """
-import requests
-import patoolib
+import wget
 import os
-class GenebankDownloader:
+import configparser
+from PharmDataProject.Utilities.NetDownloads.HttpDownloader import HTTP
 
+def mkdir(path):
+    isExists = os.path.exists(path)
+    if not isExists:
+        os.makedirs(path)
+        return path
+    else:
+        return path
+
+def download_to_data(url, path):
     """
-    The GenbankDownloader class is used to download Genbank's data
-
-    Parameters:
-        - url_info: The URL of the gen_info file provided by GenBank is not assigned when used
-        - url_pubmed: The URL of the gen_pubmed file provided by GenBank is not assigned when used
-        - dest_path: The address where you want to store the file, the default address is the current directory
-
-    Methods:
-        - genebank_download(): Download the gen_info file and gen_pubmed file to the destination folder
+    下载文件，存入相应的文件目录下
+    :param url: 下载地址
+    :param path: 存储地址
+    :return:
     """
-
-    def __init__(self, url_info: str = "https://ftp.ncbi.nih.gov/gene/DATA/gene_info.gz", url_pubmed: str = "https://ftp.ncbi.nih.gov/gene/DATA/gene2pubmed.gz",
-                 dest_path: str = "."):
-
-        self.url_info= url_info
-        self.url_pubmed = url_pubmed
-        self.info_path = dest_path+"/gene_info.gz"
-        self.pubmed_path = dest_path+"/gene2pubmed.gz"
-        self.dest_path = dest_path
-
-    def extract_rar(self, file_path, dest_path):
-        patoolib.extract_archive(file_path, outdir=dest_path)
+    print(path.split('/')[-2], "正在下载...")
+    obj = os.path.join(mkdir(path), url. split('/')[-1])
+    wget.download(url, obj)
+    print(" 下载完成！\n")
 
 
-    def download(self, url, file_path, dest_path) -> None:
 
-        response = requests.get(url, stream=True)
-        with open(file_path, 'wb') as file:
-            for chunk in response.iter_content(chunk_size=8192):
-                if chunk:
-                    file.write(chunk)
-        self.extract_rar(file_path, dest_path)
-        os.remove(file_path)
+if __name__ == '__main__':
 
+    config = configparser.ConfigParser()
+    cfgfile = '../conf/drugkb.config'
+    config.read(cfgfile)
+    # download_to_data(config.get('genebank', 'source_url_0'),
+    #                  config.get('genebank', 'data_path_0'))
+    download_to_data(config.get('genebank', 'source_url_2'),
+                     config.get('genebank', 'data_path_2'))
 
-    def genebank_download(self) -> None:
-        self.download(self.url_pubmed, self.pubmed_path, self.dest_path)
-        self.download(self.url_info, self.info_path, self.dest_path)
 
 
 

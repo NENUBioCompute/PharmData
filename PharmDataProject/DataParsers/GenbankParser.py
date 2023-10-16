@@ -1,90 +1,73 @@
-"""
-  -*- encoding: utf-8 -*-
-  @Author: wangyang
-  @Time  : 2023/10/06 12:20
-  @Email: 2168259496@qq.com
-  @function
-"""
-import csv
+# -*- coding: utf-8 -*-
+""" Index genbank dataset with MongoDB"""
+import argparse
+import os
+import sys
 import json
-import time
-import requests
-
-class GenbankParsers:
-    """
-    The GenbanParser class is used to combine gen_info file and gen_pubmed into one file to complete parsing
-
-    Parameter:
-        - file_path: The directory where the gen_info and gen_pubmed are located
-        - dest_path: The address where you want to store the file, the default address is the current directory
-
-    Methods:
-        - genbank_parser: Combine gen_info file and gen_pubmed into one file to complete parsing
-    """
-    def __init__(self, file_path, dest_path: str = "."):
-        self.info_path = file_path + "/gene_info"
-        self.pubmed_path = file_path + "/gene2pubmed"
-        self.dest_path = dest_path + "/genebank"
-
-    def genebank_parsers(self) -> None:
-
-        with open(self.info_path, 'r') as tsvfile:
-            gen_info = csv.DictReader(tsvfile, dialect='excel-tab')
-
-            with open(self.pubmed_path, 'r') as tsvfile:
-                gen_pubmed = csv.DictReader(tsvfile, dialect='excel-tab')
-                data = []
-                info = next(gen_info)
-                pubmed = next(gen_pubmed)
-                info['PubMed_ID'] = []
-                headers = info.keys()
-                with open(self.dest_path, 'w', newline='', encoding='utf-8') as f:
-                    writer = csv.DictWriter(f, fieldnames=headers, delimiter='\t')
-
-                    writer.writeheader()
-
-                    while 1:
-
-                        if pubmed == 0:
-                            data.append(info)
-                            info = next(gen_info, 0)
-                            if info == 0:
-                                break
-                            info['PubMed_ID'] = []
-                            continue
-
-                        if int(info['#tax_id']) > int(pubmed['#tax_id']):
-                            pubmed = next(gen_pubmed, 0)
+import ijson
+import gzip
+from PharmDataProject.Utilities.Database.dbutils import DBconnection
+import configparser
 
 
-                        elif int(info['#tax_id']) == int(pubmed['#tax_id']):
 
-                            if int(info['GeneID']) > int(pubmed['GeneID']):
-                                pubmed = next(gen_pubmed, 0)
+def mkpath(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+        return path
+    else:
+        return path
 
-                            elif int(info['GeneID']) == int(pubmed['GeneID']):
-                                info["PubMed_ID"].append(pubmed["PubMed_ID"])
-                                pubmed = next(gen_pubmed, 0)
+def un_gz(file_name):
+    f_name = file_name.replace(".gz", "")
+    g_file = gzip.GzipFile(file_name)
+    open(f_name, "wb+").write(g_file.read())
+    g_file.close()
 
-                            else:
-                                data.append(info)
-                                info = next(gen_info, 0)
-                                if info == 0:
-                                    break
-                                info['PubMed_ID'] = []
+def parse_to_mongo(data_path, json_path, db):
+
+    file = os.path.join(data_path, os.listdir(data_path)[0])
+    read_file = open(file, 'r', encoding='utf-8').readlines()
+
+    # parse gene
+    output = []
+    keys = read_file[0].lstrip('#').rstrip('\n').split('\t')
+    for index, line in enumerate(read_file[1:-1]):
+        values = line.strip('\n').split('\t')
+        # print(values)
+        for i in range(0, len(values)):
+            if '|' in values[i]:
+                values[i] = values[i].split('|')
+        one_data = {keys[i].replace('.', ' '):values[i].replace('-','') if type(values[i])==type("") else values[i]
+                         for i in range(len(keys))}
+        output.append(one_data)
+
+        # to_mongo
+
+        db.collection.insert_one(one_data)
+
+    print('ok!')
+    # write to json
+    # json_file_path = mkpath(json_path) + json_path.split('/')[-2] + '.json'
+    # with open(json_file_path, "w", encoding="utf-8") as jf:
+    #     json.dump(output, jf, indent=4, ensure_ascii=False)
 
 
-                        else:
-                            data.append(info)
-                            info = next(gen_info, 0)
-                            if info == 0:
-                                break
-                            info['PubMed_ID'] = []
+if __name__ == '__main__':
 
-                        if len(data) >= 100000:
-                            writer.writerows(data)
-                            data = []
-                     
-                    if data:
-                        writer.writerows(data)
+    config = configparser.ConfigParser()
+    cfgfile = '../conf/drugkb.config'
+    config.read(cfgfile)
+
+    # parse_to_mongo
+    for i in range(0, int(config.get('genebank', 'data_path_num'))):  # (0, 4)
+        db = DBconnection(cfgfile, config.get('genebank', 'db_name'),
+                          config.get('genebank', 'col_name_' + str(i + 1)))
+
+        print(db.collection)
+
+        parse_to_mongo(config.get('genebank', 'data_path_' + str(i + 1)),
+                       config.get('genebank', 'json_path_' + str(i + 1)),
+                       db)
+
 
