@@ -1,0 +1,73 @@
+'''
+@Author: juncongchen
+@Email: 1076429354@qq.com
+@Description: Xml Importer
+@Function:Import data into MongoDB
+@Date: 2023-09-30 10:10:10
+@LastEditTime: 2023-09-30 10:10:10
+@LastEditors: wangbo
+...
+import datetime
+import json
+import os
+import time
+from typing import List
+from pymongo import MongoClient
+from pymongo.errors import BulkWriteError
+from pymongo.collection import InsertManyResult
+from uniprotProject.parser.XMLDealer import *
+from uniprotProject.parser.MyUniprotParser import *
+
+
+
+class ImportXmlFileToMongoDB:
+    """Import xml file data into MongoDB"""
+
+    def __init__(self, uri: str, database: str, filename_with_path: str, max_pool_size: int = 10000,
+                 batch_size: int = 10000):
+        """
+        Initialize a mongodb client connection (connect to the specified database)
+        Args.
+            uri: str mongodb uri, e.g. mongodb://localhost:27017
+            database: database name
+            max_pool_size: maximum connection pool
+            batch_size: number of documents to insert in a batch
+        """
+        self.client = MongoClient(uri, maxPoolSize=max_pool_size)
+        self.database = database
+        self.file = filename_with_path
+        self.batch_size = batch_size
+
+
+    def import_one_file_data(self, ordered: bool = False) -> InsertManyResult:
+        """
+        write dicts data in batches with filename as collection name
+        Args.
+            ordered: whether to insert in order
+        """
+        filename = os.path.basename(self.file)[:-4]
+        dicts = list(XMLDealer.parse_xml_all(self.file,"entry"))
+        collection = self.client[self.database][filename]
+
+        try:
+            result: InsertManyResult = self.batch_insert(collection, dicts, ordered)
+            return result
+        except BulkWriteError as e:
+            print(e.details)
+            return None
+
+    def batch_insert(self, collection, dicts, ordered):
+        """batch insert data"""
+        total_docs = len(dicts)
+        inserted_docs = 0
+
+        while inserted_docs < total_docs:
+            batch = dicts[inserted_docs:inserted_docs + self.batch_size]
+            try:
+                result: InsertManyResult = collection.insert_many(batch, ordered=ordered)
+                inserted_docs += len(result.inserted_ids)
+            except BulkWriteError as e:
+                print(e.details)
+                break
+
+        return result
