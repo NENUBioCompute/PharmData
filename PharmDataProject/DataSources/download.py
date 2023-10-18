@@ -1,3 +1,12 @@
+'''
+@Author: wangbo
+@Email: 1808274540@qq.com
+@Description: crawler
+@Function:get data
+@Date: 2023-09-30 10:10:10
+@LastEditTime: 2023-09-30 10:10:10
+@LastEditors: wangbo
+'''
 import requests
 import zipfile
 import tarfile
