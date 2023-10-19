@@ -8,7 +8,8 @@
 import requests
 from PharmDataProject.DataSources.KEGGDownloader import KEGGDownloader
 from PharmDataProject.DatatoMongo.KEGGtoMongo import KEGGtoMongo
-
+from PharmDataProject.Utilities.Database.dbutils import DBconnection
+import configparser
 
 class DdiData:
     def ddi_parse(drugs):
@@ -55,8 +56,9 @@ class DdiData:
 
 if __name__ == "__main__":
 
-     drugs=KEGGDownloader.get_id("drug")
-     DdiData.ddi_parse(drugs);   #6700
+    drugs=KEGGDownloader.get_id("drug")
+    DdiData.ddi_parse(drugs);
+
 
 
 

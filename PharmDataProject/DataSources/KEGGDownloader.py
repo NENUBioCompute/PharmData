@@ -10,9 +10,6 @@ import random
 from wsgiref import headers
 import requests
 from Bio.KEGG import REST
-# from PharmDataProject.DatatoMongo.KEGGtoMongo import KEGGtoMongo
-from PharmDataProject.DataParsers.KEGGParsers import Parse
-
 class KEGGDownloader:
     def get_id(self):
         drug_list = REST.kegg_list(self).read()
@@ -21,10 +18,8 @@ class KEGGDownloader:
         for line in drug_list.rstrip().split("\n"):
             ids, description = line.split("\t")
             items.append(ids)
-            # print(ids)
         return items
-
-    def download(example, name):
+    def download(example):
         items = KEGGDownloader.get_id(example)
         for item in items:
             print(item)
@@ -44,14 +39,8 @@ class KEGGDownloader:
             response = requests.get(url)
             data=response.text
             # data = REST.kegg_get(item).read()
-            entries = data.strip().split("\n///\n")
-            #     # 装到一个JSON格式
-            json_data = Parse.convert_to_json(entries)
-            print(json_data)
-
-            # KEGGtoMongo.save(json_data, "PharmRG", "59.73.198.168", 27017, name, "readwrite", "readwrite")
-
+            yield data
 if __name__ == "__main__":
     # drugs=KEGGDownloader.get_id('pathway');
     # print(len(drugs))
-    KEGGDownloader.download("compound","KEGG_Compound")
+    KEGGDownloader.download("compound")

@@ -13,7 +13,6 @@ from Bio.KEGG import REST
 from pymongo.collection import Collection
 from pymongo.database import Database
 
-from PharmDataProject.DataParsers.KEGGParsers import Parse
 
 
 class KEGGtoMongo:
