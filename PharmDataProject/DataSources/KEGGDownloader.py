@@ -35,6 +35,7 @@ class KEGGDownloader:
                        ]
             opener.addheaders = [('User-Agent', random.choice(ua_list))]
             urllib.request.install_opener(opener)
+
             url = 'https://rest.kegg.jp/get/' + item
             response = requests.get(url)
             data=response.text
