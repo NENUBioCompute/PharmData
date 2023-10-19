@@ -10,6 +10,8 @@ from PharmDataProject.DataSources.KEGGDownloader import KEGGDownloader
 import configparser
 from PharmDataProject.Utilities.Database.dbutils import DBconnection
 import requests
+import time
+import random
 class KEGGParsers:
     # parse drugs、compounds、disease、pathway
     def parse_entry_data(entry_data):
@@ -48,6 +50,7 @@ class KEGGParsers:
                 entry_info[current_key] = current_value
 
         return entry_info
+
     # parse ddi
     def ddi_parse(drugs):
         for drug in drugs:
@@ -93,7 +96,7 @@ class KEGGParsers:
     def convert_to_json(entries):
         json_data = []
         for entry in entries:
-            entry_info = KEGGParsers.parse_entry_data
+            entry_info = KEGGParsers.parse_entry_data(entry)
             json_data.append(entry_info)
         return json_data[0]
     # json file
@@ -116,18 +119,21 @@ if __name__ == "__main__":
         if database_name=='ddi':
             drugs=KEGGDownloader.get_id("drug")
             KEGGParsers.ddi_parse(drugs);
-
-        generator = KEGGDownloader.download(database_name)
-        # use generator get next data
-        try:
-            while True:
-                data = next(generator)
-                entries = data.strip().split("\n///\n")
-                # 装到一个JSON格式
-                json_data = KEGGParsers.convert_to_json(entries)
-                # KEGGParsers.save_to_json_file(json_data,data_save_path)
-                db.collection.insert_one(json_data)
-                # print(json_data)
-        except StopIteration:
-            pass  # 生成器结束
+        else:
+            generator = KEGGDownloader.download(database_name)
+            # use generator get next data
+            try:
+                while True:
+                    data = next(generator)
+                    entries = data.strip().split("\n///\n")
+                    # 装到一个JSON格式
+                    json_data = KEGGParsers.convert_to_json(entries)
+                    sleep_time = random.uniform(4, 12)
+                    time.sleep(sleep_time)
+                    print(json_data)
+                    # KEGGParsers.save_to_json_file(json_data,data_save_path)
+                    db.collection.insert_one(json_data)
+                    # print(json_data)
+            except StopIteration:
+                pass  # 生成器结束
 
