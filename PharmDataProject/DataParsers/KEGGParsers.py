@@ -1,4 +1,3 @@
-
 """
   -*- encoding: utf-8 -*-
   @Author: evie
@@ -7,6 +6,8 @@
   @function
 """
 import json
+from PharmDataProject.DataSources.KEGGDownloader import KEGGDownloader
+
 class Parse:
     def parse_entry_data(entry_data):
         lines = entry_data.strip().split('\n')
@@ -36,7 +37,6 @@ class Parse:
                     current_value = [current_value[0]]
                 else:
                     current_value = []
-
         #last one
         if current_key:
             if len(current_value) == 1:
@@ -45,7 +45,6 @@ class Parse:
                 entry_info[current_key] = current_value
 
         return entry_info
-
     # put in json
     def convert_to_json(entries):
         json_data = []
@@ -53,12 +52,10 @@ class Parse:
             entry_info = Parse.parse_entry_data(entry)
             json_data.append(entry_info)
         return json_data
-
     # json file
     def save_to_json_file(json_data, file_path):
         with open(file_path, 'w') as json_file:
             json.dump(json_data, json_file, indent=4)
-
 
 
 if __name__ == "__main__":
@@ -69,3 +66,6 @@ if __name__ == "__main__":
         json_data = Parse.convert_to_json(entries)
        # 保存到JSON文件
         Parse.save_to_json_file(json_data, '../../json/H01476.json')
+    KEGGDownloader.download("compound", "KEGG_Compound")
+
+
