@@ -16,7 +16,6 @@ class HTTP:
     """
     Downloading specific data source files with responding url in config file.
     """
-
     def DownLoad( url:str, local_path:str, file_name:str):
         p1 = Process(target=HTTP.GetData, args=(url, local_path, file_name),name=file_name)
         p1.start()
@@ -57,8 +56,6 @@ class HTTP:
 
         else:
             logger.info(f'{file_name} Success')
-
-
         finally:
             end = time.time()
             timeusage = end-start
