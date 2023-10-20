@@ -20,7 +20,6 @@ class KEGGParsers:
         entry_info = {}
         current_key = None
         current_value = []
-
         for line in lines:
             if line.strip() == "///":
                 break
@@ -48,7 +47,6 @@ class KEGGParsers:
                 entry_info[current_key] = current_value[0]
             else:
                 entry_info[current_key] = current_value
-
         return entry_info
 
     # parse ddi
