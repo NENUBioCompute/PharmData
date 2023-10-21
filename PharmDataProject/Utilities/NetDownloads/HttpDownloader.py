@@ -11,7 +11,7 @@ import subprocess
 from multiprocessing import Process
 from urllib import request, error
 from PharmDataProject.Utilities.FileDealers.FileSystem import *
-
+import wget
 class HTTP:
     """
     Downloading specific data source files with responding url in config file.
@@ -35,7 +35,9 @@ class HTTP:
             start = time.time()
             folder_is_exists.__func__(local_path)
             file_is_exists.__func__(file_name)
-            subprocess.call(f"wget {url} -O {local_path + file_name}", timeout=600)
+            # print(f"wget {url} -O {local_path + file_name}")
+            # subprocess.call(f"wget {url} -O {local_path + file_name}", timeout=600)
+            wget.download(url, local_path + file_name)
 
         except subprocess.TimeoutExpired as e:
             raise subprocess.SubprocessError("%s was terminated as of timeout!!" % e.cmd)
