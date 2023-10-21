@@ -89,7 +89,7 @@ class TTdDownloader:
                 # print(sourceDir)
                 # print(folderPath)
                 # print(fileName)
-                self.pid = HTTP.download(sourceDir, folderPath + '/', fileName)  # Download
+                self.pid = HTTP.DownLoad(sourceDir, folderPath + '/', fileName)  # Download
                 logger.info('Downloading')
 
             except urllib.error.URLError:
