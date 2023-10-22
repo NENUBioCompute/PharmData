@@ -126,7 +126,7 @@ if __name__ == "__main__":
                     entries = data.strip().split("\n///\n")
                     # 装到一个JSON格式
                     json_data = KEGGParsers.convert_to_json(entries)
-                    sleep_time = random.uniform(4, 12)
+                    sleep_time = random.uniform(4, 9)
                     time.sleep(sleep_time)
                     print(json_data)
                     # KEGGParsers.save_to_json_file(json_data,data_save_path)

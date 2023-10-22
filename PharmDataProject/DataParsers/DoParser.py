@@ -14,13 +14,7 @@ import configparser
 from PharmDataProject.Utilities.Database.dbutils import DBconnection
 import json
 
-
-class DoParser:
-    def __init__(self, datapath, jsonpath):
-        self.datapath = datapath
-        self.jsonpath = jsonpath
-
-    def parse(self):
+def parse(datapath,jsonpath):
         xref_list = {}
         xref_id_list = []
         xref_id_value_list = []
@@ -37,10 +31,9 @@ class DoParser:
         dic = {}
         newdic = []
 
-        f = open(self.datapath, 'r', encoding="utf-8")
+        f = open(datapath, 'r', encoding="utf-8")
         for line in f.readlines():
-            lable = line.split(":")[
-                0]  # Read the list ‘name’, starting from the position of '0', ending with ":", reading all field names
+            lable = line.split(":")[0]  # Read the list ‘name’, starting from the position of '0', ending with ":", reading all field names
             # View the name of the list that was read
             # print(lable)
             # Start to judge
@@ -75,13 +68,13 @@ class DoParser:
 
 
             elif lable == "xref":
-                xref_id = line[5:].strip().split(":")[0]
+                xref_id=line[5:].strip().split(":")[0]
                 xref_id_list.append(xref_id)
-                xref_id_value = line[5:].strip().split(":")[1]
+                xref_id_value=line[5:].strip().split(":")[1]
                 xref_id_value_list.append(xref_id_value)
                 for i in range(0, len(xref_id_list)):
-                    xref_list[xref_id_list[i]] = xref_id_value_list[i]
-                    dic["xref"] = xref_list
+                    xref_list[xref_id_list[i]]=xref_id_value_list[i]
+                    dic["xref"]=xref_list
 
             elif lable == "disjoint_from":
                 disjoint_from_number = line[14:].strip()
@@ -105,12 +98,12 @@ class DoParser:
 
             elif lable == "is_a":
 
-                parent_id = line[5:].strip().split(":")[1].split("!")[0].strip()
-                parent_id_name_dic["doid"] = parent_id
-                # print(parent_id)
-                parent_name_value = line[5:].strip().split("!")[1].strip()
-                parent_id_name_dic["name"] = parent_name_value
-                # parent_array = []
+                parent_id=line[5:].strip().split(":")[1].split("!")[0].strip()
+                parent_id_name_dic["doid"]=parent_id
+               # print(parent_id)
+                parent_name_value=line[5:].strip().split("!")[1].strip()
+                parent_id_name_dic["name"]=parent_name_value
+                #parent_array = []
                 parent.append(parent_id_name_dic)
                 parent_id_name_dic = {}
 
@@ -120,59 +113,43 @@ class DoParser:
                 synonym_list.append(line[8:].strip().split("\"")[1])
                 dic["synonym"] = synonym_list
 
-
             elif line.strip("\n") == "[Term]":
-
                 def_discription = {}
-
                 synonym_list = []
-
                 subset_number_list = []
-
                 xref_list = {}
-
                 xref_id_list = []
-
                 xref_id_value_list = []
-
                 parent = []
-
-                alt_id_number_list = []
-
-                if dic:  # Check if dic is not empty
-
-                    newdic.append(dic)
-
-                dic = {}  # Reset for next term
-
-            if dic:  # Ensure the last dictionary is added
-
+                alt_id_number_list=[]
+                dic = {}
                 newdic.append(dic)
+        #print(dic)
+        #print(newdic)
+        jsObj = json.dumps(newdic)
+        fileObject = open(jsonpath, 'w')
+        fileObject.write(jsObj)
+        fileObject.close()
 
-        return newdic  # Return the list of dictionaries
-
-    def to_mongo(self, db):
-        with open(self.jsonpath, "r", encoding='utf-8') as f:
+def to_mongo(jsonpath,db):
+        with open(jsonpath, "r", encoding='utf-8') as f:
             json_list = json.load(f)
             db.collection.insert_many(json_list)
 
 
 if __name__ == "__main__":
+
     config = configparser.ConfigParser()
     cfgfile = '../conf/drugkb.config'
     config.read(cfgfile)
-
+    # parse
     for i in range(0, int(config.get('do', 'data_path_num'))):
-        datapath = config.get('do', 'data_path_' + str(i + 1))
-        parser = DoParser(datapath, "")
-        data_dicts = parser.parse()
+     parse(config.get('do', 'data_path_'+ str(i + 1)), config.get('do', 'json_path_'+ str(i + 1)))
+    # to_mongo
+    for i in range(0, int(config.get('do', 'json_path_num'))):
+     db = DBconnection(cfgfile, config.get('do', 'db_name'),
+                      config.get('do', 'col_name_' + str(i + 1)))
+     print(db)
+     print(db.collection)
+     to_mongo(config.get('do', 'json_path_' + str(i + 1)), db)
 
-        if data_dicts:
-            print(data_dicts[0])  # 打印第一个字典
-            break  # 成功打印后退出循环
-
-    # 如果需要，创建数据库连接并将数据上传到MongoDB
-    # for i in range(0, int(config.get('do', 'json_path_num'))):
-    #     db = DBconnection(cfgfile, config.get('do', 'db_name'), config.get('do', 'col_name_' + str(i + 1)))
-    #     parser = DoParser(config.get('do', 'data_path_' + str(i + 1)), config.get('do', 'json_path_' + str(i + 1)))
-    #     parser.to_mongo(db)

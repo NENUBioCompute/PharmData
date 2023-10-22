@@ -3,7 +3,6 @@
 @Author  : Qiufen.Chen Wenjie.Lee
 @Time    : 2022/7/25 21:36
 @desc    : Uniprot parse
-暂时不使用
 '''
 
 import xmltodict

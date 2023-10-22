@@ -7,11 +7,7 @@ from PharmDataProject.Utilities.FileDealers import FileSystem
 import re
 import sys
 
-
 class BRENDAParser:
-
-    def __init__(self):
-        pass
 
     def brendaTxt2Dict(self, fin):
         infos = []
@@ -183,19 +179,20 @@ class BRENDAParser:
                 print('wrong when it comes to ', elem['ID'], key)
                 sys.exit()
             yield elem
-
     def parse(self):
         config = configparser.ConfigParser()
         cfgfile = '../conf/drugkb.config'
         config.read(cfgfile)
         fin_txt = os.path.join(config.get('brenda', 'data_path_1').replace('.tar.gz', ''))
+        fout_json = os.path.join(config.get('brenda', 'json_path_1'))
         dics = [x for x in self.doParse(fin_txt)]
-        return dics  # 直接返回解析得到的字典列表
+        get_dict = { }
+        for i in range(len(dics)):
+            get_dict[i] = dics[i]
+        with open(fout_json, 'w') as json_f:
+            json.dump(get_dict, json_f, indent=4)
 
 
 if __name__ == '__main__':
     d = BRENDAParser()
-    parsed_data = d.parse()  # This now returns a generator of dictionaries
-    for data in parsed_data:
-        print(data)  # Print the first dictionary
-        break  # Exit after the first iteration
+    d.parse()
