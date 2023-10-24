@@ -109,17 +109,18 @@ if __name__ == "__main__":
     cfgfile = '../conf/drugkb.config'
     config.read(cfgfile)
 
-    for i in range(0, int(config.get('kegg', 'data_path_num'))):
+    for i in range(1, int(config.get('kegg', 'data_path_num'))):
         db = DBconnection(cfgfile, config.get('kegg', 'db_name'),
                           config.get('kegg', 'col_name_' + str(i + 1)))
         database_name = config.get('kegg','source_url_'+str(i+1))
-        data_save_path = config.get('kegg','data_path_'+str(i+1))
+        data_save_path = config.get('kegg','json_path_'+str(i+1))
         if database_name=='ddi':
             drugs=KEGGDownloader.get_id("drug")
             KEGGParsers.ddi_parse(drugs);
         else:
             generator = KEGGDownloader.download(database_name)
             # use generator get next data
+            json_data_list = []
             try:
                 while True:
                     data = next(generator)
@@ -130,8 +131,15 @@ if __name__ == "__main__":
                     time.sleep(sleep_time)
                     print(json_data)
                     # KEGGParsers.save_to_json_file(json_data,data_save_path)
+                    json_data_list.append(json_data)
                     db.collection.insert_one(json_data)
                     # print(json_data)
             except StopIteration:
+                # 将列表转换为 JSON 字符串
+                json_string = json.dumps(json_data_list, indent=2)  # indent参数用于缩进格式化，可选
+
+                # 将 JSON 字符串写入文件
+                with open(data_save_path, 'w') as json_file:
+                    json_file.write(json_string)
                 pass  # 生成器结束
 
