@@ -59,8 +59,8 @@ def deleteUnwantedFiles(path):
     for parent, dirnames, filenames in os.walk(path):
         for fn in filenames:
             # FDA Adverse Event Reporting System (FAERS) began 2004Q1.
-            # keep data from 2004Q1 and after.
-            if fn[4:8] < "04Q1":
+            # keep data from 2012Q4 and after.
+            if fn[4:8] < "12Q4":
                 print("Delete " + fn)
                 os.remove(os.path.join(parent, fn))
             if fn.lower().endswith('.pdf/') or fn.lower().endswith('.doc/'):
