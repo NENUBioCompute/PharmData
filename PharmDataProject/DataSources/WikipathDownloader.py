@@ -11,12 +11,12 @@ class Wikipathway_Downloader():
         config = configparser.ConfigParser()
         config.read(cfgfile, encoding="utf-8")
         try:
-            HTTP.download(config.get('wikipathway', 'source_url_1'),
-                          config.get('wikipathway', 'data_path_1').rstrip(config.get('wikipathway', 'data_path_1').split('/')[-1]),
+            HTTP.DownLoad(config.get('wikipathway', 'source_url_1'),
+                         config.get('wikipathway', 'data_path_1').rstrip(config.get('wikipathway', 'data_path_1').split('/')[-1]),
                           config.get('wikipathway', 'data_path_1').split('/')[-1].split('.')[0])
         except Exception:
             try:
-                HTTP.download(config.get('wikipathway', 'source_url_1'),
+                HTTP.DownLoad(config.get('wikipathway', 'source_url_1'),
                               config.get('wikipathway', 'data_path_1').rstrip(config.get('wikipathway', 'data_path_1').split('/')[-1]),
                               config.get('wikipathway', 'data_path_1').split('/')[-1].split('.')[0])
             except Exception:

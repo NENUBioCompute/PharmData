@@ -95,12 +95,14 @@ class UniprotParser:
         config.read(cfgfile)
         infile = config.get('uniprot', 'data_path_1') + 'uniprot_sprot.xml'
         dics_data = UniprotParser.parse_xml_all(infile, 'entry')
+        # print(dics_data)
         db = DBconnection(cfgfile, config.get('uniprot', 'db_name'),
                           config.get('uniprot', 'col_name_1'))
 
         batch = []
         for dic_data in dics_data:
             protein_data = dic_data['entry']
+            print(protein_data)
             batch.append(protein_data)
 
             if len(batch) == batch_size:

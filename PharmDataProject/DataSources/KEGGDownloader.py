@@ -19,9 +19,12 @@ class KEGGDownloader:
             ids, description = line.split("\t")
             items.append(ids)
         return items
-    def download(example):
+    def download(example,drug):
         items = KEGGDownloader.get_id(example)
-        for item in items:
+        idx = items.index(drug)
+        print(len(items))
+        for i in range(idx,len(items)):
+            item = items[i]
             print(item)
             # proxy_handler = urllib.request.ProxyHandler({
             #     'https': '59.73.198.168:27017'
