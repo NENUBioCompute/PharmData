@@ -19,19 +19,3 @@ def get_mysql_conn():
     # 创建连接
     conn = pymysql.connect(**db_config)
     return conn
-
-def
-# 创建游标
-cursor = conn.cursor()
-
-# 执行 SQL 查询
-query = '''
-    SELECT
-    *
-    FROM
-        molecule_dictionary md
-        LEFT JOIN compound_structures cs ON md.molregno = cs.molregno 
-'''
-df = pd.read_sql(query, conn)
-
-conn.close()

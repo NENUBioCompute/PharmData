@@ -187,12 +187,6 @@ def ttdTxt2Dict_2(fin):
                 break
         row_splice = zip(row_title, row_content)  # Match two elements one by one
         dic = dict((key, value) for key, value in row_splice)  # Convert the list in the previous row to dictionary form
-        # print(row_title)  # Verify title list
-        # print(row_content)  # Validate Data Rows
-        # print(row_num)  # What line is currently read in the printout
-        # print(interval_num)
-        # print(dic_all)
-        # print(dic)
         return fp, dic
 def read_abbr(tsv_file_name):
         """
