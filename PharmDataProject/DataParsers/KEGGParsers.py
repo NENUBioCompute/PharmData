@@ -12,7 +12,6 @@ from PharmDataProject.Utilities.Database.dbutils import DBconnection
 import requests
 import time
 import random
-import os
 class KEGGParsers:
     # parse drugs、compounds、disease、pathway
     def parse_entry_data(entry_data):
@@ -51,11 +50,9 @@ class KEGGParsers:
         return entry_info
 
     # parse ddi
-    def ddi_parse(drugs,drug,data_save_path):
-        idx = drugs.index(drug)
-        # idx=0
-        for drug in range(idx,len(drugs)):
-            url = 'https://rest.kegg.jp/ddi/' + drugs[drug]
+    def ddi_parse(drugs):
+        for drug in drugs:
+            url = 'https://rest.kegg.jp/ddi/' + drug
             try:
                 response = requests.get(url)
                 response.raise_for_status()
@@ -89,11 +86,9 @@ class KEGGParsers:
                 }
 
                 # KEGGtoMongo.save(data_dict, "PharmRG", "59.73.198.168", 27017, "KEGG_DDI", "readwrite", "readwrite")
-                # print(data_dict)
-                KEGGParsers.save_to_json_file(data_dict, data_save_path + str(data_dict['drug id']) + '.json')
-                # db.collection.insert_one(data_dict)
+
+                db.collection.insert_one(data_dict)
             except requests.exceptions.RequestException as e:
-                print(e)
                 pass
     # put in json
     def convert_to_json(entries):
@@ -104,7 +99,6 @@ class KEGGParsers:
         return json_data[0]
     # json file
     def save_to_json_file(json_data, file_path):
-
         with open(file_path, 'w') as json_file:
             json.dump(json_data, json_file, indent=4)
 
@@ -115,31 +109,37 @@ if __name__ == "__main__":
     cfgfile = '../conf/drugkb.config'
     config.read(cfgfile)
 
-    for i in range(2, int(config.get('kegg', 'data_path_num'))):
+    for i in range(1, int(config.get('kegg', 'data_path_num'))):
         db = DBconnection(cfgfile, config.get('kegg', 'db_name'),
                           config.get('kegg', 'col_name_' + str(i + 1)))
         database_name = config.get('kegg','source_url_'+str(i+1))
-        data_save_path = config.get('kegg','data_path_'+str(i+1))
-        if not os.path.exists(data_save_path):
-            os.makedirs(data_save_path)
-        print(database_name)
+        data_save_path = config.get('kegg','json_path_'+str(i+1))
         if database_name=='ddi':
             drugs=KEGGDownloader.get_id("drug")
-            KEGGParsers.ddi_parse(drugs,'D05788',data_save_path)
+            KEGGParsers.ddi_parse(drugs);
         else:
-            generator = KEGGDownloader.download(database_name,'C22102')
+            generator = KEGGDownloader.download(database_name)
             # use generator get next data
+            json_data_list = []
             try:
                 while True:
                     data = next(generator)
                     entries = data.strip().split("\n///\n")
                     # 装到一个JSON格式
                     json_data = KEGGParsers.convert_to_json(entries)
-                    sleep_time = random.uniform(3, 5)
+                    sleep_time = random.uniform(4, 9)
                     time.sleep(sleep_time)
                     print(json_data)
-                    KEGGParsers.save_to_json_file(json_data,data_save_path+str(json_data['ENTRY'])+'.json')
-                    # db.collection.insert_one(json_data)
+                    # KEGGParsers.save_to_json_file(json_data,data_save_path)
+                    json_data_list.append(json_data)
+                    db.collection.insert_one(json_data)
                     # print(json_data)
             except StopIteration:
-                continue
+                # 将列表转换为 JSON 字符串
+                json_string = json.dumps(json_data_list, indent=2)  # indent参数用于缩进格式化，可选
+
+                # 将 JSON 字符串写入文件
+                with open(data_save_path, 'w') as json_file:
+                    json_file.write(json_string)
+                pass  # 生成器结束
+
