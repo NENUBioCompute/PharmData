@@ -28,16 +28,15 @@ class DBconnection(object):
         self.cfgfile = cfgfile
         config.read(self.cfgfile)
 
-
-        client = MongoClient(host=config.get('dbserver', 'host'), port=int(config.get('dbserver', 'port')))
-        # db = client.admin
-
+        host = config.get('dbserver', 'host')
+        port = int(config.get('dbserver', 'port'))
+        user = config.get('dbserver', 'user')
+        password = config.get('dbserver', 'password')
         # db.authenticate(config.get('dbserver', 'user'), config.get('dbserver', 'password'))
-        #pymongod 4.5
-        client = pymongo.MongoClient(host="127.0.0.1", port=27017, username="readwrite", password="readwrite")
+        # pymongod 4.5
+        client = pymongo.MongoClient(host=host, port=port, username=user, password=password)
         self.mydb = mydb
         self.myset = myset
-
         self.my_db = client[mydb]
         self.collection = self.my_db[myset]
 
