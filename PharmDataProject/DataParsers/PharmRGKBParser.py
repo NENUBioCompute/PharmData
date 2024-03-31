@@ -45,7 +45,7 @@ class PharmGKBParser:
         :param fin_csv:
         :param firstname: db name in mongodb
         :param secondname: table name in mongodb
-        :param sep: \t, , and so on
+        :param sep: \t , and so on
         :return:
         '''
         if '.tsv' in fin_csv:

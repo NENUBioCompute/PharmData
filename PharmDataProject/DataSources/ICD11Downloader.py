@@ -1,3 +1,9 @@
+"""
+  -*- encoding: utf-8 -*-
+  @Author: Deepwind
+  @Time  : 3/31/2024 11:00 AM
+  @Email: deepwind32@163.com
+"""
 import requests
 import random
 import re
