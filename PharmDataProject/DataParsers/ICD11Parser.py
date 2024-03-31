@@ -5,12 +5,11 @@ import sys
 import threading
 
 from PharmDataProject.Utilities.Database.dbutils_v2 import DBConnection
-import requests
+import httpx
 import random
 import re
 import time
 from lxml import etree
-from requests.exceptions import RequestException
 
 
 def ua_init():
@@ -40,17 +39,15 @@ class ICD11Parser:
             "user-agent": ua_init(),
             "x-requested-with": "XMLHttpRequest"
         }
-        # TODO 检查cookie是否可用
         self.cookies = {
             ".AspNetCore.Antiforgery.RtGCWVXC8-4": "CfDJ8Jq_h8XBjjNAtvvkag-LchhXr6BaeCxMfvI5beO_kxHscvDypFCrdCnHVx6oYi5WrIuAoPQw7UOQ52MU5LHq4mWHJRsepH0UTMnyWtrjRc7TOmLxalslFD0nNWGx6V5nK56lzDfKKPNz7tEkfG2YMXk",
             "ai_user": "qqDllWTs2S1EW2T5BgYf3A|2023-10-30T02:32:10.846Z"
         }
-        self.max_retry = 3
-        self.ids = []
-        self.id_queue = queue.Queue()
-        self.production_flag = True
+        self.max_retry = 5
         self.buffer_data = []
+        self.buffer_data_size = None
         self.db = None
+        self.counter = 0
 
     def __get_config_value(self, key):
         return self.config.get("icd11", key)
@@ -60,14 +57,16 @@ class ICD11Parser:
         response = None
         while retry_count < self.max_retry:
             try:
-                response = requests.get(url, headers=self.headers, cookies=self.cookies,
-                                        params=params, timeout=10).json()
+                response = httpx.get(url, headers=self.headers, cookies=self.cookies, params=params, timeout=10)
                 break
-            except Exception:
+            except Exception as e:
                 self.headers['user-agent'] = ua_init()
+                logging.error(params)
+                logging.error(e)
+                time.sleep(3)
             retry_count += 1
         if response is None:
-            raise RequestException("Network error, Maximum number of attempts exceeded")
+            raise IOError("Network error, Maximum number of attempts exceeded")
         return response
 
     def __get_root_ids(self):
@@ -76,18 +75,15 @@ class ICD11Parser:
         """
         root_concepts_url = self.__get_config_value("json_get_root_concepts_url")
         params = {"useHtml": "true"}
-        for item in self.__get_resp(root_concepts_url, params):
+        for item in self.__get_resp(root_concepts_url, params).json():
             self.__get_children_id(item.get('ID'), item.get('isLeaf'))
-        # tell consumers no more data
-        self.production_flag = False
 
     def __get_children_id(self, id, is_leaf):
         """
         Get children list.
         """
         if is_leaf:
-            logging.info(f"Get a leaf: {id}")
-            self.id_queue.put(id)
+            self.__save_info(id)
         else:
             children_concepts_url = self.__get_config_value("json_get_children_concepts_url")
             params = {
@@ -96,7 +92,7 @@ class ICD11Parser:
                 "showAdoptedChildren": "true",
                 "isAdoptedChild": "false"
             }
-            for item in self.__get_resp(children_concepts_url, params):
+            for item in self.__get_resp(children_concepts_url, params).json():
                 self.__get_children_id(item.get('ID'), item.get('isLeaf'))
 
     def __save_info(self, id):
@@ -111,7 +107,8 @@ class ICD11Parser:
             return new_str
 
         url = self.__get_config_value("get_content_url")
-        sel = etree.HTML(self.__get_resp(url, {"ConceptId": id}).text)
+        params = {"ConceptId": id}
+        sel = etree.HTML(self.__get_resp(url, params).text)
         data = {}
         data['_id'] = id
         data['grab_date'] = time.strftime("%Y-%m-%d", time.gmtime())
@@ -132,46 +129,30 @@ class ICD11Parser:
             data['first_name'] = first_name[0] if first_name else ''
             data['last_name'] = last_name if last_name else ''
             data['description'] = description if description else ''
-            if len(self.buffer_data) >= self.__get_config_value("data_buffer_size"):
+            if len(self.buffer_data) >= self.buffer_data_size:
                 self.db.insert(self.buffer_data)
                 self.buffer_data = []
+            self.counter += 1
+            print(f"\rCount: {self.counter}", end='')
             self.buffer_data.append(data)
 
     def __parse(self):
-        self.db = DBConnection(self.__get_config_value("db_name"), self.__get_config_value("collection_name"),
-                               cfg_file=self.__get_config_value("cfg_file_location"))
         self.__get_root_ids()
-        self.__start_consuming()
+        # insert the left data
+        if len(self.buffer_data) > 0:
+            self.db.insert(self.buffer_data)
 
-    def __start_consuming(self):
-        def consume_ids():
-            while not self.id_queue.empty():
-                try:
-                    id = self.id_queue.get(block=True)
-                    self.__save_info(id)
-                    self.id_queue.task_done()
-                except queue.Empty:
-                    continue
-        # start consumers
-        num_consumers = 2
-        consumers = [threading.Thread(target=consume_ids) for _ in range(num_consumers)]
-        for consumer in consumers:
-            consumer.start()
-        # wait all consumers to finish
-        for consumer in consumers:
-            consumer.join()
-
-        remaining_ids = self.id_queue.qsize()
-        if remaining_ids > 0:
-            logging.warning(f"Finished with {remaining_ids} IDs unprocessed.")
     def start(self, config):
         self.config = config
+        self.buffer_data_size = int(self.__get_config_value("data_buffer_size"))
+        self.db = DBConnection(self.__get_config_value("db_name"), self.__get_config_value("collection_name"),
+                               cfg_file=self.__get_config_value("cfg_file_location"))
         self.__parse()
+        self.db.close()
 
 
 if __name__ == '__main__':
-    sys.path.append("/tmp/pycharm_project_647")
-    logging.basicConfig(level=logging.INFO,
+    logging.basicConfig(level=logging.ERROR,
                         format='%(asctime)s %(levelname)s %(message)s',
                         datefmt='%m/%d %I:%M:%S')
     icd11_parser = ICD11Parser()

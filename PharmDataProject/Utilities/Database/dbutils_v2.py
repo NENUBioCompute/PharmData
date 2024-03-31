@@ -103,6 +103,9 @@ class DBConnection:
     def clear_collection(self):
         self.collection.drop()
 
+    def close(self):
+        self.client.close()
+
 
 if __name__ == "__main__":
     # The following is a usage example
