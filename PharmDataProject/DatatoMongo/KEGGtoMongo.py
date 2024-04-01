@@ -5,13 +5,7 @@
   @Email: 2762376919@qq.com
   @function
 """
-import pymongo
-import json
 
-import requests
-from Bio.KEGG import REST
-from pymongo.collection import Collection
-from pymongo.database import Database
 import configparser
 from PharmDataProject.Utilities.Database.dbutils import DBconnection
 import os
