@@ -4,26 +4,25 @@ from pymongo import MongoClient
 from concurrent.futures import ThreadPoolExecutor
 
 import time
+
 # client = MongoClient("localhost", 27017, username="readwrite", password="readwrite")
-client = MongoClient("59.73.198.168", 27017,username="readwrite", password="readwrite")
+client = MongoClient("59.73.198.168", 27017, username="readwrite", password="readwrite")
 db = client["PharmRG"]
 
 collection = db["source_drugs"]
 url_list = []
 
+
 # 发送GET请求获取网页内容
 class DrugLinkCrawler:
 
-
-    def get_url(self,i,j):
-        print(i,j)
-
+    def get_url(self, i, j):
+        print(i, j)
         visited_links = set()  # 存储已访问过的链接
         url = f'https://www.drugs.com/alpha/{chr(i)}{chr(j)}.html'
         headers = {
-        "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"
         }
-
         # headers = copy_headers_dict(headers)
         response = requests.get(url=url, headers=headers)
 
@@ -43,10 +42,11 @@ class DrugLinkCrawler:
 
                             # 发送HTTP请求获取网页内容
                             url_list.append(full_link)
-                            print(full_link)
-                            # print(len(url_list))
+                            # print(full_link)
+                            print(len(url_list))
         else:
             print(response)
+
     def muilt_url(self):
         with ThreadPoolExecutor(max_workers=5) as executor:
             for i in range(97, 123):
@@ -57,7 +57,8 @@ class DrugLinkCrawler:
 
 class Parsedata:
 
-    def GetData(self,url):
+    def GetData(self, url):
+
         response = requests.get(url)
         html = response.text
 
@@ -65,8 +66,7 @@ class Parsedata:
         soup = BeautifulSoup(html, 'html.parser')
 
         # 查找class为contentBox的盒子
-        # content_box = soup.find('div', class_="contentBox")
-        content_box = soup.find(id="content")
+        content_box = soup.find('div', class_="contentBox")
         # 获取h1标签内容
         drug_name = content_box.find('h1').text
 
@@ -82,10 +82,9 @@ class Parsedata:
             # 遍历所有的<b>标签
             for element in drug_subtitle.find_all('b'):
                 field_name = element.string.strip()[:-1]
-                field_name = field_name.split(':')[0]
 
                 # 获取当前标签之后的所有兄弟元素
-                siblings = element.find_next_siblings()
+                siblings = element.next_siblings
 
                 field_value = ''
                 # 遍历所有兄弟元素
@@ -104,7 +103,6 @@ class Parsedata:
                     elif sibling.name == 'i':
                         field_value += sibling.string.strip()
                 drug_info[field_name] = field_value
-
         else:
             generic_name = brand_name = dosage_form = drug_class = None
 
@@ -137,23 +135,26 @@ class Parsedata:
         # 返回结果
         result = {
             "drug_name": drug_name,
-            "generic name": generic_name,
-            "brand name": brand_name,
-            "dosage form": dosage_form,
-            "drug class": drug_class,
+            "generic name:": generic_name,
+            "brand name:": brand_name,
+            "dosage form:": dosage_form,
+            "drug class:": drug_class,
             "uses": uses,
             "warnings": warnings,
             "interactions": interactions,
             "side_effects": side_effects,
             "dosage": dosage
         }
+        print('baocun')
         collection.insert_one(result)
-        # print(result)
-    def muilt_url_2(self,useless):
+        print(result)
+
+    def muilt_url_2(self, useless):
         with ThreadPoolExecutor(max_workers=5) as executor:
             for url in useless:
-                executor.submit(self.GetData,url)
+                executor.submit(self.GetData, url)
             executor.shutdown(wait=True)
+
 
 if __name__ == '__main__':
     start_time = time.time()
@@ -161,14 +162,12 @@ if __name__ == '__main__':
     DrugLinkCrawler.muilt_url()
 
     end_time = time.time()
-    print(f"shijianwei{end_time-start_time}")
+    print(f"shijianwei{end_time - start_time}")
     sets = set(url_list)
     useless = list(sets)
     print(len(useless))
     start_time2 = time.time()
-    parsedata = Parsedata()
-    parsedata.muilt_url_2(useless)
+    Parsedata = Parsedata()
+    Parsedata.muilt_url_2(useless)
     end_time2 = time.time()
     print(f"shijianwei22222{end_time2 - start_time2}")
-
-

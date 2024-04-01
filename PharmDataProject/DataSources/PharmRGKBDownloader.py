@@ -6,18 +6,21 @@ import configparser
 import os
 
 
+class PharmRGKBDownloader:
+    def __init__(self):
+        pass
 
-def download(url,dir):
-    os.system('wget %s -O %s'%(url,dir))
+    def download(self, url,dir):
+        os.system('wget %s -O %s'%(url,dir))
 
-def un_gz(file_name):
-    f = file_name.replace(".zip", "")
-    os.system('unzip %s -d %s'%(file_name,f))
+    def un_gz(self, file_name):
+        f = file_name.replace(".zip", "")
+        os.system('unzip %s -d %s'%(file_name,f))
 
 def main(url, dir):
     print('start download')
-    download(url,dir)
-    un_gz(dir)
+    PharmRGKBDownloader.download(url,dir)
+    PharmRGKBDownloader.un_gz(dir)
 
 #########################################################################################################################################
 if __name__ == '__main__':

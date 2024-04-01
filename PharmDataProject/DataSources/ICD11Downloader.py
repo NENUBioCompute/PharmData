@@ -3,54 +3,12 @@ import random
 import re
 import time
 import redis
-import pymongo
-import csv
-import os
+
 
 from lxml import etree
-from concurrent.futures import ThreadPoolExecutor
 
 
-class CSVHandler:
-    '''
-  你只需定义一个包含列标题元组，例如: headers = ['name', 'age', 'city']
-  当你实例化CSVHandler类时，只需传入你希望使用的列标题，这样就可以在创建新CSV文件时自动添加列标题了
-  '''
-
-    def __init__(self, filename, headers=[]):
-        self.filename = filename
-        self.headers = headers
-
-        # 判断文件是否存在，如果不存在，则创建文件并初始化列标题
-        if not os.path.exists(filename):
-            with open(filename, 'w', newline='', encoding='utf-8') as f:
-                writer = csv.DictWriter(f, headers)
-                writer.writeheader()  # 写入列标题
-
-    def save_single_data(self, data):
-        """
-      保存单条数据到CSV文件中
-      :param data: 一个字典，其中的键应该和列标题对应
-      """
-        with open(self.filename, 'a', newline='', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, self.headers)
-            writer.writerow(data)
-
-    def save_to_specific_location(self, new_path):
-        """
-      将CSV文件保存到指定的位置
-      :param new_path: 新文件的完整路径
-      """
-        os.rename(self.filename, new_path)
-
-
-# 使用示例
-# headers = ['name', 'age', 'city']
-# handler = CSVHandler('data.csv', headers)
-# data = {'name': 'John', 'age': 28, 'city': 'New York'}
-# handler.save_single_data(data)
-# handler.save_to_specific_location('new_data.csv')
-
+#   copy from ICD11Parser
 
 class SpiderHandler:
 
@@ -227,38 +185,3 @@ class SpiderHandler:
 
             # 存入数据后将该id从redis中移除
             self.redis_client.srem(self.redis_name, ID)
-
-
-if __name__ == '__main__':
-
-    # 实例化CSVHandler对象
-    headers = ['_id', 'grab_date', 'url', 'all_name', 'first_name', 'last_name', 'description']
-    handler = CSVHandler('icd11_data.csv', headers)
-
-    # 实例化SpiderHandler对象
-    spiders = SpiderHandler()
-
-    # 执行获取列表函数
-    spiders.get_Root()
-
-    # 检查Redis数据库中的spiders.redis_name集合的大小，并将其赋值给flag
-    flag = spiders.redis_client.scard(spiders.redis_name)
-
-    while flag:
-
-        # 从redis中读取id并解码存入list
-        ids = []
-        for id in spiders.redis_client.smembers(spiders.redis_name):
-            ids.append(id.decode())
-        print(len(ids))
-
-        # 多线程执行详情解析,定义线程数，没有代理ip的情况下，线程数应小于等于5
-        executor = ThreadPoolExecutor(5)
-        for data in executor.map(spiders.get_info, ids):
-            # print(data)
-            pass
-
-        flag = spiders.redis_client.scard(spiders.redis_name)
-
-    handler.save_to_specific_location('./icd11_data.csv')
-

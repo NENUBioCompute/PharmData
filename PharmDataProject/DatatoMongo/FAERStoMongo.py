@@ -26,6 +26,7 @@ class FAERStoMongo:
             for key, group in merged_data:
                 data = {k: '' if pd.isna(v) else v for k, v in group.to_dict(orient='records')[0].items()}
                 collection.insert_one(data)
+
 if __name__ == '__main__':
     faerstomongo = FAERStoMongo()
     faerstomongo.save_to_Mongodb()
