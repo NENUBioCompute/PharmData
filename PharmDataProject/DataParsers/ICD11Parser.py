@@ -1,15 +1,12 @@
 import configparser
+from datetime import datetime, timedelta
 import logging
-import queue
-import sys
-import threading
-
-from PharmDataProject.Utilities.Database.dbutils_v2 import DBConnection
-import httpx
+import requests
 import random
 import re
 import time
 from lxml import etree
+from PharmDataProject.Utilities.Database.dbutils_v2 import DBConnection
 
 
 def ua_init():
@@ -43,11 +40,14 @@ class ICD11Parser:
             ".AspNetCore.Antiforgery.RtGCWVXC8-4": "CfDJ8Jq_h8XBjjNAtvvkag-LchhXr6BaeCxMfvI5beO_kxHscvDypFCrdCnHVx6oYi5WrIuAoPQw7UOQ52MU5LHq4mWHJRsepH0UTMnyWtrjRc7TOmLxalslFD0nNWGx6V5nK56lzDfKKPNz7tEkfG2YMXk",
             "ai_user": "qqDllWTs2S1EW2T5BgYf3A|2023-10-30T02:32:10.846Z"
         }
-        self.max_retry = 5
+        self.max_retry = 10
+        self.ids = set()
         self.buffer_data = []
         self.buffer_data_size = None
         self.db = None
         self.counter = 0
+        self.saved_data_counter = 0
+        self.start_time = datetime.now()
 
     def __get_config_value(self, key):
         return self.config.get("icd11", key)
@@ -57,16 +57,15 @@ class ICD11Parser:
         response = None
         while retry_count < self.max_retry:
             try:
-                response = httpx.get(url, headers=self.headers, cookies=self.cookies, params=params, timeout=10)
+                response = requests.get(url, headers=self.headers, cookies=self.cookies, params=params, timeout=10)
                 break
             except Exception as e:
                 self.headers['user-agent'] = ua_init()
-                logging.error(params)
                 logging.error(e)
-                time.sleep(3)
+                time.sleep(20)
             retry_count += 1
         if response is None:
-            raise IOError("Network error, Maximum number of attempts exceeded")
+            raise requests.RequestException("Network error, Maximum number of attempts exceeded")
         return response
 
     def __get_root_ids(self):
@@ -83,6 +82,11 @@ class ICD11Parser:
         Get children list.
         """
         if is_leaf:
+            # avoid duplicate id
+            old_len = len(self.ids)
+            self.ids.add(id)
+            if old_len == len(self.ids):
+                return
             self.__save_info(id)
         else:
             children_concepts_url = self.__get_config_value("json_get_children_concepts_url")
@@ -109,37 +113,40 @@ class ICD11Parser:
         url = self.__get_config_value("get_content_url")
         params = {"ConceptId": id}
         sel = etree.HTML(self.__get_resp(url, params).text)
-        data = {}
-        data['_id'] = id
-        data['grab_date'] = time.strftime("%Y-%m-%d", time.gmtime())
-        data['url'] = self.__get_config_value("data_url_prefix") + id
+        data = {'url': self.__get_config_value("data_url_prefix") + id}
         all_name = ''.join(sel.xpath("string(//div[@class='detailsTitle'])"))
-        data['all_name'] = deal_str(all_name) if all_name else ''
+        all_name = deal_str(all_name) if all_name else ''
 
-        # To prevent cases where the request status code is 200 but the data retrieval fails,
-        # this function will skip processing the current instance if it does not obtain all_name from the HTML,
-        # which is done to ensure the integrity of the data.
-        if not data['all_name']:
+        # To prevent cases where the request status code is 200 but the data retrieval fails
+        if not all_name:
             pass
         else:
             first_name = sel.xpath("//div[@class='detailsTitle']/span/text()")
             last_name = ''.join(sel.xpath("//div[@class='detailsTitle']/text()")).strip()
             description = ''.join(
                 sel.xpath("string(//div[contains(text(),'Description')]/following-sibling::div[1])")).strip()
-            data['first_name'] = first_name[0] if first_name else ''
-            data['last_name'] = last_name if last_name else ''
+            data['disease_id'] = first_name[0] if first_name else ''
+            data['disease_name'] = last_name if last_name else ''
             data['description'] = description if description else ''
             if len(self.buffer_data) >= self.buffer_data_size:
+                self.saved_data_counter += len(self.buffer_data)
+                logging.info(f"Saved Record: {self.saved_data_counter}")
                 self.db.insert(self.buffer_data)
                 self.buffer_data = []
             self.counter += 1
-            print(f"\rCount: {self.counter}", end='')
+            elapsed_time = datetime.now() - self.start_time
+            # for debug
+            print(
+                f"\rCount: {self.counter}, Elapse time: {elapsed_time}, average_elapsed_time: {timedelta(seconds=elapsed_time.seconds) / self.counter}",
+                end='')
             self.buffer_data.append(data)
 
     def __parse(self):
         self.__get_root_ids()
         # insert the left data
         if len(self.buffer_data) > 0:
+            self.saved_data_counter += len(self.buffer_data)
+            logging.info(f"Saved Record: {self.saved_data_counter}")
             self.db.insert(self.buffer_data)
 
     def start(self, config):
@@ -152,12 +159,11 @@ class ICD11Parser:
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.ERROR,
+    logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s %(levelname)s %(message)s',
                         datefmt='%m/%d %I:%M:%S')
     icd11_parser = ICD11Parser()
-    # '../conf/drugkb.config'
-    cfg = "/home/zhaojingtong/tmpcode/PharmData/PharmDataProject/conf/drugkb.config"
+    cfg = "../conf/drugkb.config"
     config = configparser.ConfigParser()
     config.read(cfg)
     icd11_parser.start(config)
