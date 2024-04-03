@@ -95,13 +95,16 @@ class DBConnection:
         # If dbCheck is set to True, this method is called before the data is automatically inserted.
         if dbCheck:
             if self.collection.find_one({}) is None:
-                logging.info("Collection is empty!")
+                logging.debug("Collection is empty!")
             else:
                 logging.error("Collection not empty.")
                 raise Exception("Collection not empty Error!")
 
     def clear_collection(self):
         self.collection.drop()
+
+    def search_record(self, query: dict) -> dict:
+        return self.collection.find_one(query)
 
     def close(self):
         self.client.close()
