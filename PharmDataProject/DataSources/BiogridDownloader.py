@@ -80,7 +80,7 @@ class DrugsDownload:
         try:
             self.curState = 2
             folder_is_exists.__func__(folderPath)
-            self.pid = HTTP.DownLoad(sourceUrl, folderPath, fileName)  # Download
+            self.pid = HTTP.download(sourceUrl, folderPath, fileName)  # Download
             logger.info('Downloading')
             localPath = os.path.join(folderPath, fileName)
             wget.download(sourceUrl, localPath)
