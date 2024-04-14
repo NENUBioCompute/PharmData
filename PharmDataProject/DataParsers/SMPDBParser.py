@@ -35,13 +35,11 @@ class SMPDBParser:
                     model_info = dict()
                     # 收集模型基本信息
                     model_info['id'] = model.getId()
-                    model_info['name'] = model.getName()
-                    model_info['time_units'] = model.getTimeUnits()
 
                     # 收集物种（ compartments, species）信息
                     compartments = {}
                     for c in model.getListOfCompartments():
-                        compartments[c.getId()] = {'name': c.getName(), 'size': c.getSize()}
+                        compartments[c.getId()] = {'name': c.getName()}
                     model_info['compartments'] = compartments
 
                     species = {}
@@ -76,7 +74,7 @@ class SMPDBParser:
                         reactions[r.getId()] = reaction_info
 
                     model_info['reactions'] = reactions
-                    # pprint.pprint(model_info)
+                    pprint.pprint(model_info)
         return model_info
 
     def start(self):
