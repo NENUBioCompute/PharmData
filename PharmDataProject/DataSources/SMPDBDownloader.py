@@ -4,10 +4,10 @@
   @Time  : 4/13/2024 4:44 PM
   @Email: deepwind32@163.com
 """
-import logging
 import os
 import subprocess
 import threading
+
 from PharmDataProject.Utilities.FileDealers.ConfigParser import ConfigParser
 from PharmDataProject.Utilities.NetDownloads.HttpDownloader import HTTP
 
@@ -21,22 +21,24 @@ class SMPDBDownloader:
         self.config = config
         self.data_path = config.get("smpdb", "data_path")
 
-    def download_and_unzip(self, url):
+    def __download_and_unzip(self, url):
         filename = url.split("/")[-1]
         HTTP.get_data(url, self.data_path, filename)
-        subprocess.run(args = ["unzip", "-q", "-n", self.data_path + filename, "-d", self.data_path + filename.split(".")[0]], check=True, bufsize=4096)
+        subprocess.run(
+            args=["unzip", "-q", "-n", self.data_path + filename, "-d", self.data_path + filename.split(".")[0]],
+            check=True, bufsize=4096)
         os.remove(self.data_path + filename)
 
     def start(self):
-        urls = [config.get("smpdb", "pathways_csv_data_source"), config.get("smpdb", "metabolite_names_data_source"),
-                config.get("smpdb", "protein_names_data_source"), config.get("smpdb", "sbml_data_source")]
+        urls = [self.config.get("smpdb", "pathways_csv_data_source"),
+                self.config.get("smpdb", "metabolite_names_data_source"),
+                self.config.get("smpdb", "protein_names_data_source"), self.config.get("smpdb", "sbml_data_source")]
 
-        threads = [threading.Thread(target=self.download_and_unzip, args=(url,)) for url in urls]
+        threads = [threading.Thread(target=self.__download_and_unzip, args=(url,)) for url in urls]
         for thread in threads:
             thread.start()
         for thread in threads:
             thread.join()
-        logging.info("SMPDB downloads successfully.")
 
 
 if __name__ == "__main__":

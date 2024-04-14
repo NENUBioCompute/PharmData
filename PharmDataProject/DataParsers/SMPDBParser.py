@@ -8,10 +8,12 @@
 import os
 import pprint
 
-import pandas as pd
 import libsbml
+import pandas as pd
+from tqdm import tqdm
 
 from PharmDataProject.Utilities.FileDealers.ConfigParser import ConfigParser
+
 
 class SMPDBParser:
     def __init__(self, config):
@@ -19,11 +21,12 @@ class SMPDBParser:
         self.data_path = config.get("smpdb", "data_path")
 
     def __csvs2dicts(self, dir_path: str):
-        return [pd.read_csv(os.path.join(dir_path, filename)).to_dict(orient='records') for filename in os.listdir(dir_path)]
+        return [pd.read_csv(os.path.join(dir_path, filename)).to_dict(orient='records') for filename in
+                tqdm(os.listdir(dir_path), desc="csv data processing")]
 
     def __sbmls2dicts(self, dir_path: str):
-        print("test")
-        for filename in os.listdir(dir_path):
+        all_model_info = []
+        for filename in tqdm(os.listdir(dir_path), desc="csv data processing"):
             if filename.endswith(".sbml"):
                 sbml_file_path = os.path.join(dir_path, filename)
                 reader = libsbml.SBMLReader()
@@ -33,15 +36,13 @@ class SMPDBParser:
                 model = document.getModel()
                 if model:
                     model_info = dict()
-                    # 收集模型基本信息
                     model_info['id'] = model.getId()
-
-                    # 收集物种（ compartments, species）信息
+                    # compartments
                     compartments = {}
                     for c in model.getListOfCompartments():
                         compartments[c.getId()] = {'name': c.getName()}
                     model_info['compartments'] = compartments
-
+                    # species
                     species = {}
                     for s in model.getListOfSpecies():
                         species[s.getId()] = {
@@ -51,7 +52,7 @@ class SMPDBParser:
                             'boundary_condition': s.getBoundaryCondition()
                         }
                     model_info['species'] = species
-
+                    # reactions
                     reactions = {}
                     for r in model.getListOfReactions():
                         reaction_info = {}
@@ -59,11 +60,9 @@ class SMPDBParser:
                         reaction_info['name'] = r.getName()
                         reaction_info['reversible'] = r.getReversible()
 
-                        # 收集反应物与产物及其系数
                         reactants = {s.getSpecies(): s.getStoichiometry() for s in r.getListOfReactants()}
                         products = {s.getSpecies(): s.getStoichiometry() for s in r.getListOfProducts()}
 
-                        # 反应速率常数或公式
                         kinetic_law = r.getKineticLaw()
                         if kinetic_law is not None:
                             reaction_info['kinetic_law'] = kinetic_law.getFormula()
@@ -72,25 +71,21 @@ class SMPDBParser:
                         reaction_info['products'] = products
 
                         reactions[r.getId()] = reaction_info
-
                     model_info['reactions'] = reactions
-                    pprint.pprint(model_info)
-        return model_info
+                    all_model_info.append(model_info)
+        return all_model_info
 
     def start(self):
-        csv_dirs = ["smpdb_pathways", "smpdb_metabolites", "smpdb_proteins"]
-        sbml_dir = "smpdb_sbml"
-        # dicts = [self.__csv2dict(os.path.join(config.get("smpdb", "data_path"), dir_name)) for dir_name in csv_dirs]
-        # dicts.append()
-        # return
-        model_info = self.__sbmls2dicts(os.path.join(config.get("smpdb", "data_path"), sbml_dir))
-        pprint.pprint(model_info)
-
-
-
+        dirs = ["smpdb_pathways", "smpdb_metabolites", "smpdb_proteins", "smpdb_sbml"]
+        for i, dir_name in enumerate(dirs):
+            if i == 3:
+                yield [dir_name, self.__sbmls2dicts(os.path.join(self.config.get("smpdb", "data_path"), dir_name))]
+            else:
+                yield [dir_name, self.__csvs2dicts(os.path.join(self.config.get("smpdb", "data_path"), dir_name))]
 
 
 if __name__ == "__main__":
     cfg = "/home/zhaojingtong/tmpcode/PharmData/PharmDataProject/conf/drugkb.config"
     config = ConfigParser.GetConfig(cfg)
-    SMPDBParser(config).start()
+    for i in SMPDBParser(config).start():
+        pprint.pprint(i)

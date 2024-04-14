@@ -8,8 +8,9 @@
 import configparser
 import logging
 import time
-import pymongo
 from collections import deque
+
+import pymongo
 
 logger = logging.getLogger(__name__)
 ch = logging.StreamHandler()
@@ -37,12 +38,10 @@ class DBConnection:
     """
 
     def __init__(self, db_name: str, collection_name: str, host: str = "127.0.0.1", port: int = 27017,
-                 username: str = None, password: str = None, db_check=True, cfg_file=None):
-        if cfg_file is None:
+                 username: str = None, password: str = None, db_check=True, config=None):
+        if config is None:
             pass
         else:
-            config = configparser.ConfigParser()
-            config.read(cfg_file)
             host = config.get('dbserver', 'host')
             port = int(config.get('dbserver', 'port').strip())
             username = config.get('dbserver', 'user')
@@ -98,7 +97,14 @@ class DBConnection:
                 logging.debug("Collection is empty!")
             else:
                 logging.error("Collection not empty.")
-                raise Exception("Collection not empty Error!")
+                while True:
+                    choice = input("Drop collection? y/n").strip().lower()
+                    if choice == 'y':
+                        self.collection.drop()
+                        break
+                    elif choice == 'n':
+                        raise Exception("Collection not empty Error!")
+
 
     def clear_collection(self):
         self.collection.drop()
@@ -119,7 +125,9 @@ if __name__ == "__main__":
     # disable collection empty check
     drugDB = DBConnection("drugdb", "offsides", "59.168.1.100", username="root", password="pw123", db_check=False)
     # If you use config
-    drugDB = DBConnection("drugdb", "offsides", cfg_file="../../conf/drugkb.config")
+    cfg_file = "../../conf/drugkb.config"
+    config = configparser.ConfigParser.GetConfig(cfg_file)
+    drugDB = DBConnection("drugdb", "offsides", config=config)
 
     """
     Recommend Usage

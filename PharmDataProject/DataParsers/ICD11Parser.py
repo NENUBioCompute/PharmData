@@ -1,13 +1,15 @@
 import configparser
-import queue
-import threading
-from datetime import datetime, timedelta
 import logging
-import requests
+import queue
 import random
 import re
+import threading
 import time
+from datetime import datetime, timedelta
+
+import requests
 from lxml import etree
+
 from PharmDataProject.Utilities.Database.dbutils_v2 import DBConnection
 
 
@@ -226,7 +228,7 @@ class ICD11Parser:
         self.config = config
         self.buffer_data_size = int(self.__get_config_value("data_buffer_size"))
         self.db = DBConnection(self.__get_config_value("db_name"), self.__get_config_value("collection_name"),
-                               cfg_file=self.__get_config_value("cfg_file_location"))
+                               config=config)
         self.__parse()
         self.db.close()
 
