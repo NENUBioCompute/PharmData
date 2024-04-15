@@ -61,17 +61,21 @@ class DGIDBParser:
 
 
 if __name__ == '__main__':
-
     config = configparser.ConfigParser()
     cfgfile = '../conf/drugkb.config'
     config.read(cfgfile)
-    DGIDBParser = DGIDBParser
 
-    # parse
-    for i in range(0, int(config.get('dgidb', 'data_path_num'))):  # (0, 4)
+    # Loop through configurations and parse
+    for i in range(0, int(config.get('dgidb', 'data_path_num'))):
+        data_path = config.get('dgidb', 'data_path_' + str(i + 1))
+        json_path = config.get('dgidb', 'json_path_' + str(i + 1))
         db = DBconnection(cfgfile, config.get('dgidb', 'db_name'), config.get('dgidb', 'col_name_' + str(i + 1)))
-        DGIDBParser.parse(config.get('dgidb', 'data_path_' + str(i + 1)), config.get('dgidb', 'json_path_' + str(i + 1)))
 
+        # Create an instance of DGIDBParser
+        parser = DGIDBParser(data_path, json_path)
+
+        # Use the instance to call parse
+        parser.parse(db)
     # to_mongo
     # for i in range(0, int(config.get('dgidb', 'json_path_num'))):  # (0, 4)
     #     db = DBconnection(cfgfile, config.get('dgidb', 'db_name'),

@@ -76,15 +76,17 @@ class TransporterParser:
 
 
 if __name__ == '__main__':
-
     url = "https://transportal.compbio.ucsf.edu/index/"
-    TransporterParser = TransporterParser
-    transporter_links = TransporterParser.get_transporter_links(url)
+    # 实例化 TransporterParser 类，传入 URL
+    transporter_parser = TransporterParser(url)  # 使用实例化的对象
+    transporter_links = transporter_parser.get_transporter_links()
 
     for link in transporter_links:
         print(link)
         try:
             name = link.split("/")[-2]
-            TransporterParser.scrape_and_save_data(link, name)
-        except:
-            print(f"No data found for {link}")
+            # 对每个链接创建新的实例，因为 self.url 需要更新
+            transporter_instance = TransporterParser(link)
+            transporter_instance.scrape_and_save_data(name)
+        except Exception as e:
+            print(f"Error processing {link}: {str(e)}")

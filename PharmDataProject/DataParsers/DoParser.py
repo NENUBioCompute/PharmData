@@ -145,18 +145,19 @@ class DoParser:
 
 
 if __name__ == "__main__":
-
     config = configparser.ConfigParser()
     cfgfile = '../conf/drugkb.config'
     config.read(cfgfile)
-    DoParser = DoParser
-    # parse
+
+    # 为每个数据和JSON路径创建并使用DoParser实例
     for i in range(0, int(config.get('do', 'data_path_num'))):
-        DoParser.parse(config.get('do', 'data_path_' + str(i + 1)), config.get('do', 'json_path_' + str(i + 1)))
-    # to_mongo
-    for i in range(0, int(config.get('do', 'json_path_num'))):
-        db = DBconnection(cfgfile, config.get('do', 'db_name'),
-                          config.get('do', 'col_name_' + str(i + 1)))
-        print(db)
-        print(db.collection)
-        DoParser.to_mongo(config.get('do', 'json_path_' + str(i + 1)), db)
+        datapath = config.get('do', 'data_path_' + str(i + 1))
+        jsonpath = config.get('do', 'json_path_' + str(i + 1))
+        parser = DoParser(datapath, jsonpath)
+        parser.parse()
+
+    # 如果需要，创建数据库连接并将数据上传到MongoDB
+    # for i in range(0, int(config.get('do', 'json_path_num'))):
+    #     db = DBconnection(cfgfile, config.get('do', 'db_name'), config.get('do', 'col_name_' + str(i + 1)))
+    #     parser = DoParser(config.get('do', 'data_path_' + str(i + 1)), config.get('do', 'json_path_' + str(i + 1)))
+    #     parser.to_mongo(db)

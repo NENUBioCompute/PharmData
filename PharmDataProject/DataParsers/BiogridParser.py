@@ -264,18 +264,19 @@ class BiogirdPaser:
 
 #########################################################################################################################################
 if __name__ == '__main__':
-
     cfgfile = "../conf/drugkb.config"
     config = configparser.ConfigParser()
     config.read(cfgfile)
-    biogridparser = BiogirdPaser
 
-    # parse
-    for i in range(0, int(config.get('biogrid', 'data_path_num'))):  # (0, 1)
+    # Create an instance of BiogirdPaser
+    biogrid_parser = BiogirdPaser()
+
+    # Using the instance to call methods
+    for i in range(0, int(config.get('biogrid', 'data_path_num'))):  # Example range
         db = DBconnection(cfgfile, config.get('biogrid', 'db_name'), config.get('biogrid', 'col_name_' + str(i + 1)))
-        biogridparser.to_csv(config.get('biogrid', 'data_path_1'))
-        biogridparser.parse(config.get('biogrid', 'data_path_' + str(i + 1)),
-                            config.get('biogrid', 'json_path_' + str(i + 1)), db)
+        biogrid_parser.to_csv(config.get('biogrid', 'data_path_' + str(i + 1)))
+        biogrid_parser.parse(config.get('biogrid', 'data_path_' + str(i + 1)),
+                             config.get('biogrid', 'json_path_' + str(i + 1)), db)
     # # to_mongo
     # for i in range(0, int(config.get('biogrid', 'json_path_num'))):  # (0, 1)
     #     db = DBconnection(cfgfile, config.get('biogrid', 'db_name'), config.get('biogrid', 'col_name_' + str(i + 1)))

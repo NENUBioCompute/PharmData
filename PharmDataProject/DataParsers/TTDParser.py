@@ -493,9 +493,13 @@ class TTDParser:
 if __name__ == '__main__':
     print('start', time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
     start = time.time()
-    count = 0
-    TTDParser = TTDParser
-    TTDParser.parse()
-    # print(count)
+
+    # 创建 TTDParser 类的实例
+    ttd_parser = TTDParser()
+
+    # 使用实例调用 parse() 方法
+    ttd_parser.parse()
+
     print('stop', time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
     print('time', time.time() - start)
+
