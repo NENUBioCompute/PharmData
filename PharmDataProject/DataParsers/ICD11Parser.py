@@ -1,264 +1,242 @@
+import configparser
+import queue
+import threading
+from datetime import datetime, timedelta
+import logging
 import requests
 import random
 import re
 import time
-import redis
-import pymongo
-import csv
-import os
-
 from lxml import etree
-from concurrent.futures import ThreadPoolExecutor
+from PharmDataProject.Utilities.Database.dbutils_v2 import DBConnection
 
 
-class CSVHandler:
-    '''
-  你只需定义一个包含列标题元组，例如: headers = ['name', 'age', 'city']
-  当你实例化CSVHandler类时，只需传入你希望使用的列标题，这样就可以在创建新CSV文件时自动添加列标题了
-  '''
-
-    def __init__(self, filename, headers=[]):
-        self.filename = filename
-        self.headers = headers
-
-        # 判断文件是否存在，如果不存在，则创建文件并初始化列标题
-        if not os.path.exists(filename):
-            with open(filename, 'w', newline='', encoding='utf-8') as f:
-                writer = csv.DictWriter(f, headers)
-                writer.writeheader()  # 写入列标题
-
-    def save_single_data(self, data):
-        """
-      保存单条数据到CSV文件中
-      :param data: 一个字典，其中的键应该和列标题对应
-      """
-        with open(self.filename, 'a', newline='', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, self.headers)
-            writer.writerow(data)
-
-    def save_to_specific_location(self, new_path):
-        """
-      将CSV文件保存到指定的位置
-      :param new_path: 新文件的完整路径
-      """
-        os.rename(self.filename, new_path)
+def ua_init():
+    base_user_agent = 'Mozilla/5.0 (Windows NT {0}; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{1}.0.{2}.{3} Safari/537.36'
+    user_agent = base_user_agent.format(random.choice(['6.1', '6.2'] + ['10.0' for i in range(7)]),
+                                        random.choice([i for i in range(70, 99)]),
+                                        random.choice([i + 1 for i in range(2200)]),
+                                        random.choice([i + 1 for i in range(99)]),
+                                        )
+    return user_agent
 
 
-# 使用示例
-# headers = ['name', 'age', 'city']
-# handler = CSVHandler('data.csv', headers)
-# data = {'name': 'John', 'age': 28, 'city': 'New York'}
-# handler.save_single_data(data)
-# handler.save_to_specific_location('new_data.csv')
-
-
-class SpiderHandler:
-
-    # 初始化随机user_agent
-    def ua_init(self):
-        # 生成一个随机的、伪造的User-Agent字符串
-        # 每次发送请求时都会使用一个不同的User-Agent，帮助绕过某些基于User-Agent的简单反爬虫机制
-        base_user_agent = 'Mozilla/5.0 (Windows NT {0}; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{1}.0.{2}.{3} Safari/537.36'
-        user_agent = base_user_agent.format(random.choice(['6.1', '6.2'] + ['10.0' for i in range(7)]),
-                                            random.choice([i for i in range(70, 99)]),
-                                            random.choice([i + 1 for i in range(2200)]),
-                                            random.choice([i + 1 for i in range(99)]),
-                                            )
-        return user_agent
-
-    # 初始化请求头信息
+class ICD11Parser:
     def __init__(self):
-
-        # 将与HTTP请求一起发送的头信息
+        self.config = None
         self.headers = {
             "authority": "icd.who.int",
             "accept": "*/*",
             "accept-language": "zh-CN,zh;q=0.9",
             "referer": "https://icd.who.int/dev11/l-m/en",
-            "sec-ch-ua": "\"Chromium\";v=\"118\", \"Google Chrome\";v=\"118\", \"Not=A?Brand\";v=\"99\"",
+            "sec-ch-ua": '"Chromium";v="118", "Google Chrome";v="118", "Not=A?Brand";v="99"',
             "sec-ch-ua-mobile": "?0",
-            "sec-ch-ua-platform": "\"Windows\"",
+            "sec-ch-ua-platform": '"Windows"',
             "sec-fetch-dest": "empty",
             "sec-fetch-mode": "cors",
             "sec-fetch-site": "same-origin",
-            "user-agent": self.ua_init(),
+            "user-agent": ua_init(),
             "x-requested-with": "XMLHttpRequest"
         }
-
-        # Cookies通常用于存储会话数据
         self.cookies = {
             ".AspNetCore.Antiforgery.RtGCWVXC8-4": "CfDJ8Jq_h8XBjjNAtvvkag-LchhXr6BaeCxMfvI5beO_kxHscvDypFCrdCnHVx6oYi5WrIuAoPQw7UOQ52MU5LHq4mWHJRsepH0UTMnyWtrjRc7TOmLxalslFD0nNWGx6V5nK56lzDfKKPNz7tEkfG2YMXk",
             "ai_user": "qqDllWTs2S1EW2T5BgYf3A|2023-10-30T02:32:10.846Z"
         }
+        self.max_retry = 20
+        self.ids = set()
+        self.buffer_data = []
+        self.buffer_data_size = None
+        self.db = None
+        self.counter = 0
+        self.saved_data_counter = 0
+        self.start_time = datetime.now()
+        self.retry_queue = queue.Queue()
+        self.id_queue = queue.Queue()
+        # self.ip_pool = ["http://127.0.0.1:26881"]
 
-        # 初始化一个Redis客户端
-        # self.redis_client = redis.Redis(host='127.0.0.1',port='6379')
-        self.redis_client = redis.Redis()
-        # try:
-        #   self.redis_client = redis.Redis(host='172.29.129.100',port='6379')
-        #   # 其他与Redis相关的代码
-        # except redis.ConnectionError:
-        #   print("无法连接到Redis服务")
+    def __get_config_value(self, key):
+        return self.config.get("icd11", key)
 
-        self.redis_name = 'ICD:deep_url'
-
-    # 格式化字符串
-    def deal_str(self, str1):
-
-        # 对字符串进行清洗和格式化
-        new_str = re.sub('\\s{2,}', ' ', re.sub('(\t|\r|\n|\xa0)+', ' ', str1).replace(',', '，').strip()).replace(
-            '\u200b', '').replace("\u3000", '')
-
-        return new_str
-
-    # 获取父列表
-    def get_Root(self):
-
-        JsonGetRootConcepts_url = "https://icd.who.int/dev11/l-m/en/JsonGetRootConcepts"
-        JsonGetRootConcepts_params = {
-            "useHtml": "true"
-        }
-        while True:
+    def __get_resp(self, url, params):
+        retry_count = 0
+        response = None
+        while retry_count < self.max_retry:
             try:
-                response = requests.get(JsonGetRootConcepts_url, headers=self.headers, cookies=self.cookies,
-                                        params=JsonGetRootConcepts_params, timeout=5).json()
+                response = requests.get(url, headers=self.headers, cookies=self.cookies, params=params, timeout=5)
+                if response.status_code == 401:
+                    self.headers['user-agent'] = ua_init()
+                    response = requests.get(url, headers=self.headers, cookies=self.cookies, params=params, timeout=5)
+                    if response.status_code == 401:
+                        raise Exception(401)
+                    time.sleep(10)
                 break
             except Exception as e:
-                self.headers['user-agent'] = self.ua_init()
-                print(e)
-        print('共有一级标签', len(response), '个')
-        for respon in response:
-            print('=====================正在解析第', response.index(respon) + 1, '个=========================')
-            ID = respon.get('ID')
-            isLeaf = respon.get('isLeaf')
-            print(ID, isLeaf)
-            self.get_Children(ID, isLeaf)
+                self.headers['user-agent'] = ua_init()
+                logging.error(e)
+                time.sleep(20)
+            retry_count += 1
+        if response is None:
+            logging.error(f"Network error, Maximum number of attempts exceeded. \n params: {params}")
+        return response
 
-    # 获取子列表
-    def get_Children(self, ID, isLeaf):
+    def __get_root_ids(self):
+        """
+        get root id list
+        """
+        root_concepts_url = self.__get_config_value("json_get_root_concepts_url")
+        params = {"useHtml": "true"}
+        resp = self.__get_resp(root_concepts_url, params)
+        if resp is None:
+            raise requests.RequestException("Root concept id acquiring failed. Network issue, out of max try.")
+        root_data = [(item.get('ID'), item.get('isLeaf')) for item in resp.json()]
+        # for item in resp.json():
+        #     self.__get_children_id(item.get('ID'), item.get('isLeaf'))
+        threads = [threading.Thread(target=self.__get_children_id, args=(arg[0], arg[1])) for arg in root_data]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
 
-        if isLeaf:
-            print('最底层子标签', ID, isLeaf)
-            # 将最底层标签id存入redis
-            self.redis_client.sadd(self.redis_name, ID)
-            # self.redis_client.sadd(self.redis_name + '_bak', ID)
+    def __get_children_id(self, id, is_leaf):
+        """
+        Get children list.
+        """
+        if is_leaf:
+            # avoid duplicate id
+            old_len = len(self.ids)
+            self.ids.add(id)
+            if old_len == len(self.ids):
+                return
+            self.id_queue.put(id)
         else:
-            JsonGetChildrenConcepts_url = "https://icd.who.int/dev11/l-m/en/JsonGetChildrenConcepts"
+            children_concepts_url = self.__get_config_value("json_get_children_concepts_url")
             params = {
-                "ConceptId": ID,
+                "ConceptId": id,
                 "useHtml": "true",
                 "showAdoptedChildren": "true",
                 "isAdoptedChild": "false"
             }
-            while True:
-                try:
-                    response = requests.get(JsonGetChildrenConcepts_url, headers=self.headers, cookies=self.cookies,
-                                            params=params, timeout=10).json()
-                    break
-                except Exception as e:
-                    self.headers['user-agent'] = self.ua_init()
-                    print(e)
+            resp = self.__get_resp(children_concepts_url, params)
+            if resp is None:
+                self.retry_queue.put(("children_id", id, is_leaf))
+                logging.error("children_id: {id} is added into retry queue.")
+                return
+            for item in resp.json():
+                self.__get_children_id(item.get('ID'), item.get('isLeaf'))
 
-            print('共有二级标签', len(response), '个')
+    def __save_info(self, id):
+        """
+        Store corresponding page data according to id
+        """
 
-            for respon in response:
-                print('-------正在解析第', response.index(respon) + 1, '个-------')
-                ID = respon.get('ID')
-                isLeaf = respon.get('isLeaf')
-                print('-------', ID, isLeaf)
-                self.get_Children(ID, isLeaf)
+        def deal_str(string):
+            """对字符串进行清洗和格式化"""
+            new_str = re.sub('\\s{2,}', ' ', re.sub('(\t|\r|\n|\xa0)+', ' ', string).replace(',', '，').strip()).replace(
+                '\u200b', '').replace("\u3000", '')
+            return new_str
 
-    # 采集详情
-    def get_info(self, ID):
+        url = self.__get_config_value("get_content_url")
+        params = {"ConceptId": id}
+        data = {'url': self.__get_config_value("data_url_prefix") + id}
 
-        data = {}
-        url = "https://icd.who.int/dev11/l-m/en/GetConcept"
-        params = {
-            "ConceptId": ID
-        }
-        while True:
-            try:
-                response = requests.get(url, headers=self.headers, cookies=self.cookies, params=params, timeout=8)
-                break
-            except Exception as e:
-                self.headers['user-agent'] = self.ua_init()
-                print(e)
-        sel = etree.HTML(response.text)
+        if self.db.search_record(data) is not None:
+            logging.info(f"A saved data record found with ID: {id}")
+            self.counter += 1
+            return
 
-        # id
-        data['_id'] = ID
+        sel = None
+        sel_counter = self.max_retry
+        while sel is None:
+            resp = self.__get_resp(url, params)
+            if resp is None:
+                self.retry_queue.put(("concept", id))
+                return
 
-        # 采集日期
-        grab_date = time.strftime("%Y-%m-%d", time.gmtime())
-        data['grab_date'] = grab_date
+            sel = etree.HTML(resp.text)
+            sel_counter -= 1
+            if sel_counter == 0:
+                logging.error("concept_id: {id} is added into retry queue.")
+                self.retry_queue.put(("concept", id))
+                return
 
-        # 访问链接
-        data['url'] = 'https://icd.who.int/dev11/l-m/en#/' + ID
-
-        # all_name
         all_name = ''.join(sel.xpath("string(//div[@class='detailsTitle'])"))
-        data['all_name'] = self.deal_str(all_name) if all_name else ''
+        all_name = deal_str(all_name) if all_name else ''
 
-        # 防止有请求状态码是200，但数据请求失败的情况
-        # 如果从HTML中没有获取到 all_name，函数会跳过当前的处理，这是为了确保数据的完整性
-        if not data['all_name']:
-            pass
-        else:
-            # first_name
+        # To prevent cases where the request status code is 200 but the data retrieval fails
+        if all_name:
             first_name = sel.xpath("//div[@class='detailsTitle']/span/text()")
-            data['first_name'] = first_name[0] if first_name else ''
-
-            # last_name
             last_name = ''.join(sel.xpath("//div[@class='detailsTitle']/text()")).strip()
-            data['last_name'] = last_name if last_name else ''
-
-            # 描述信息
             description = ''.join(
                 sel.xpath("string(//div[contains(text(),'Description')]/following-sibling::div[1])")).strip()
+            data['disease_id'] = first_name[0] if first_name else ''
+            data['disease_name'] = last_name if last_name else ''
             data['description'] = description if description else ''
+            if len(self.buffer_data) >= self.buffer_data_size:
+                self.saved_data_counter += len(self.buffer_data)
+                logging.info(f"Saved Record: {self.saved_data_counter}")
+                self.db.insert(self.buffer_data)
+                self.buffer_data = []
+            self.counter += 1
+            elapsed_time = datetime.now() - self.start_time
+            # for debug
+            print(
+                f"\rCount: {self.counter}, Elapse time: {elapsed_time}, average_elapsed_time: {timedelta(seconds=elapsed_time.seconds) / self.counter}",
+                end='')
+            self.buffer_data.append(data)
 
-            print(data)
+    def __retry(self):
+        """
+        Retry failed tasks.
+        """
+        logging.info("Retrying starts.")
+        while not self.retry_queue.empty():
+            task_info = self.retry_queue.get()
+            if task_info[0] == "children_id":
+                self.__get_children_id(task_info[1], task_info[2])
+            elif task_info[0] == "concept":
+                self.__save_info(task_info[1])
+            else:
+                raise ValueError("Unknown task type")
 
-            # 实例化CSVHandler类将数据保存到CSV文件
+    def __parse(self):
+        self.__get_root_ids()
+        self.__retry()
 
-            handler.save_single_data(data)
+        def get_data():
+            try:
+                while True:
+                    self.__save_info(self.id_queue.get(block=False))
+            except queue.Empty:
+                return
 
-            # self.save_data(data)
+        # save_info
+        threads = [threading.Thread(target=get_data) for _ in range(int(self.__get_config_value("thread_num")))]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        # insert the left data
+        if len(self.buffer_data) > 0:
+            self.saved_data_counter += len(self.buffer_data)
+            logging.info(f"Saved Record: {self.saved_data_counter}")
+            self.db.insert(self.buffer_data)
+        logging.info("Work finished.")
 
-            # 存入数据后将该id从redis中移除
-            self.redis_client.srem(self.redis_name, ID)
+    def start(self, config):
+        self.config = config
+        self.buffer_data_size = int(self.__get_config_value("data_buffer_size"))
+        self.db = DBConnection(self.__get_config_value("db_name"), self.__get_config_value("collection_name"),
+                               cfg_file=self.__get_config_value("cfg_file_location"))
+        self.__parse()
+        self.db.close()
 
 
 if __name__ == '__main__':
-
-    # 实例化CSVHandler对象
-    headers = ['_id', 'grab_date', 'url', 'all_name', 'first_name', 'last_name', 'description']
-    handler = CSVHandler('icd11_data.csv', headers)
-
-    # 实例化SpiderHandler对象
-    spiders = SpiderHandler()
-
-    # 执行获取列表函数
-    spiders.get_Root()
-
-    # 检查Redis数据库中的spiders.redis_name集合的大小，并将其赋值给flag
-    flag = spiders.redis_client.scard(spiders.redis_name)
-
-    while flag:
-
-        # 从redis中读取id并解码存入list
-        ids = []
-        for id in spiders.redis_client.smembers(spiders.redis_name):
-            ids.append(id.decode())
-        print(len(ids))
-
-        # 多线程执行详情解析,定义线程数，没有代理ip的情况下，线程数应小于等于5
-        executor = ThreadPoolExecutor(5)
-        for data in executor.map(spiders.get_info, ids):
-            # print(data)
-            pass
-
-        flag = spiders.redis_client.scard(spiders.redis_name)
-
-    handler.save_to_specific_location('./icd11_data.csv')
-
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(asctime)s %(levelname)s %(message)s',
+                        datefmt='%m/%d %I:%M:%S')
+    icd11_parser = ICD11Parser()
+    cfg = "/home/zhaojingtong/tmpcode/PharmData/PharmDataProject/conf/drugkb.config"
+    config = configparser.ConfigParser()
+    config.read(cfg)
+    icd11_parser.start(config)

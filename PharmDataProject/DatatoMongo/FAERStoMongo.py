@@ -23,10 +23,20 @@ class FAERStoMongo:
         collection = db.collection
         for merged_data in faersparser.parser_all_data():
 
+            data_to_insert = []
+            batch_size = 10000
+
             for key, group in merged_data:
                 data = {k: '' if pd.isna(v) else v for k, v in group.to_dict(orient='records')[0].items()}
-                collection.insert_one(data)
+                data_to_insert.append(data)
 
+                if len(data_to_insert) >= batch_size:
+                    collection.insert_many(data_to_insert)
+                    data_to_insert = []
+
+            # Insert remaining data if any
+            if data_to_insert:
+                collection.insert_many(data_to_insert)
 if __name__ == '__main__':
     faerstomongo = FAERStoMongo()
     faerstomongo.save_to_Mongodb()
