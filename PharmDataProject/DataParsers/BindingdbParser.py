@@ -55,3 +55,5 @@ class BindingDbParser:
                     chains.append(chain)
                 rowdict['chains'] = chains
                 yield rowdict
+
+

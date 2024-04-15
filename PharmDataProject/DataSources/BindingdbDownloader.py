@@ -18,7 +18,7 @@ config.read(cfgfile)
 
 
 def bindingdbDownloader():
-    url = args.filename
+    url = args.source_url_1
 
     try:
         # Send the request and get the data

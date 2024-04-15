@@ -1,17 +1,6 @@
-# ! /usr/bin/env python3
-# -*- coding: utf-8 -*-
-# @Time    : 2020/8/15
-# @Author  : Yuanzhao Guo
-# @Email   : guoyz@nenu.edu.cn
-# @File    : Nsides.py
-# @Software: PyCharm
-
-
+import configparser
 from urllib import request
 import os
-import shutil
-from os.path import join, getsize
-import configparser
 
 
 class TwosidesDownloader:
@@ -37,10 +26,11 @@ if __name__ == '__main__':
     config = configparser.ConfigParser()
     cfgfile = '../conf/drugkb.config'
     config.read(cfgfile)
-    TwosidesDownloader = TwosidesDownloader
+    downloader = TwosidesDownloader()  # 创建 TwosidesDownloader 类的实例
 
-    TwosidesDownloader.get_twosides(config.get('twosides', 'source_url_1'),
-                 config.get('twosides', 'data_path_1'))
+    # 使用实例调用方法
+    downloader.get_twosides(config.get('twosides', 'source_url_1'),
+                            config.get('twosides', 'data_path_1'))
 
-    TwosidesDownloader.get_offsides(config.get('twosides', 'source_url_2'),
-                 config.get('twosides', 'data_path_2'))
+    downloader.get_offsides(config.get('twosides', 'source_url_2'),
+                            config.get('twosides', 'data_path_2'))

@@ -185,3 +185,27 @@ class SpiderHandler:
 
             # 存入数据后将该id从redis中移除
             self.redis_client.srem(self.redis_name, ID)
+
+import time
+
+if __name__ == '__main__':
+    # 记录脚本开始的时间
+    start_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+    print('Script started at:', start_time)
+
+    # 创建 SpiderHandler 类的实例
+    spider = SpiderHandler()
+
+    try:
+        # 调用 get_Root 方法开始下载一级标签
+        spider.get_Root()
+        print('Download initiated successfully.')
+    except Exception as e:
+        # 如果在下载过程中出现异常，打印异常信息
+        print('An error occurred:', e)
+    finally:
+        # 记录脚本结束的时间
+        end_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+        duration = time.time() - time.mktime(time.strptime(start_time, '%Y-%m-%d %H:%M:%S'))
+        print('Script finished at:', end_time)
+        print('Total duration: {:.2f} seconds.'.format(duration))
