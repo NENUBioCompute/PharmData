@@ -6,34 +6,35 @@
   @function
 """
 import gzip
-import json
+import os
+import pprint
 
-class TransformJsonConverter:
-    def __init__(self, input_file, output_file):
-        self.input_file = input_file
-        self.output_file = output_file
+import pandas as pd
 
-    def extract_gz_to_json(self):
-        with gzip.open(self.input_file, 'rb') as f_in:
+from PharmDataProject.Utilities.FileDealers.ConfigParser import ConfigParser
+
+
+class StitchParser:
+    def __init__(self, config):
+        self.config = config
+        self.data_path = config.get("smpdb", "data_path")
+
+    def __gunzip(self, filepath):
+        with gzip.open(filepath, 'rb') as f_in:
             content = f_in.read().decode('utf-8')
 
-        data = []
-        lines = content.split('\n')
-        header = lines[0].split('\t')
-        for line in lines[1:]:
-            if line:
-                values = line.split('\t')
-                entry = dict(zip(header, values))
-                data.append(entry)
+        return pd.read_csv(filepath, delimiter='\t')
 
-        with open(self.output_file, 'w') as f_out:
-            json.dump(data, f_out, indent=4)
+    def __concat(self, data1, data2):
+        return pd.concat([data1, data2])
 
-        print(f"文件 {self.output_file} 转换完成")
+    def start(self):
+        for dir_name in os.listdir(self.data_path):
+            if dir_name.endswith('.gz'):
+                yield self.__gunzip(os.path.join(self.data_path + dir_name))
 
-# 创建类实例并调用方法
-input_file = '9606.protein_chemical.links.detailed.v5.0.tsv.gz'
-output_file = '9606.protein_chemical.links.detailed.v5.0.json'
-
-converter = TransformJsonConverter(input_file, output_file)
-converter.extract_gz_to_json()
+if __name__ == "__main__":
+    cfg = "/home/zhaojingtong/tmpcode/PharmData/PharmDataProject/conf/drugkb.config"
+    config = ConfigParser.GetConfig(cfg)
+    for i in StitchParser(config).start():
+        pprint.pprint(i)
