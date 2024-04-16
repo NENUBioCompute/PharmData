@@ -19,7 +19,7 @@ from PharmDataProject.Utilities.Database.dbutils import DBconnection
 import configparser
 
 
-class BiogirdPaser:
+class BiogridParser:
     def __init__(self):
         pass
 
@@ -50,10 +50,10 @@ class BiogirdPaser:
 
     def parse(self, data_path, json_path, db):
         # to_csv(data_path)
-
-        num = 0
+        result_dicts = []
         with open(data_path + "Biogrid.csv", 'r', encoding='utf-8') as csvfile:
             reader = csv.DictReader(csvfile)
+            num = 0
             for each in reader:
 
                 # print(each)
@@ -247,9 +247,9 @@ class BiogirdPaser:
                 if each["Publication 1st Author"] != None:
                     each["Publication 1st Author"] = each["Publication 1st Author"][1:-1]
 
+                result_dicts.append(each)
                 # fw = open(json_path + str(num) + ".json", "w")
                 # json.dump(each, fw, indent=4)
-                db.collection.insert_one(each)
                 # fw.close()
 
             #########################################################################################################################################
@@ -267,18 +267,12 @@ if __name__ == '__main__':
     cfgfile = "../conf/drugkb.config"
     config = configparser.ConfigParser()
     config.read(cfgfile)
+    biogrid_parser = BiogridParser()
 
-    # Create an instance of BiogirdPaser
-    biogrid_parser = BiogirdPaser()
-
-    # Using the instance to call methods
-    for i in range(0, int(config.get('biogrid', 'data_path_num'))):  # Example range
-        db = DBconnection(cfgfile, config.get('biogrid', 'db_name'), config.get('biogrid', 'col_name_' + str(i + 1)))
-        biogrid_parser.to_csv(config.get('biogrid', 'data_path_' + str(i + 1)))
-        biogrid_parser.parse(config.get('biogrid', 'data_path_' + str(i + 1)),
-                             config.get('biogrid', 'json_path_' + str(i + 1)), db)
-    # # to_mongo
-    # for i in range(0, int(config.get('biogrid', 'json_path_num'))):  # (0, 1)
-    #     db = DBconnection(cfgfile, config.get('biogrid', 'db_name'), config.get('biogrid', 'col_name_' + str(i + 1)))
-    #     print(db.collection)
-    #     to_mongo(config.get('biogrid', 'json_path_' + str(i + 1)), db)
+    for i in range(0, int(config.get('biogrid', 'data_path_num'))):
+        data_path = config.get('biogrid', 'data_path_' + str(i + 1))
+        biogrid_parser.to_csv(data_path)
+        dict_data = biogrid_parser.parse(data_path)
+        # 现在你可以对dict_data做任何操作，比如打印或保存到文件
+        print(dict_data)
+        break

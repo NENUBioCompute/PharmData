@@ -189,15 +189,13 @@ class BRENDAParser:
         cfgfile = '../conf/drugkb.config'
         config.read(cfgfile)
         fin_txt = os.path.join(config.get('brenda', 'data_path_1').replace('.tar.gz', ''))
-        fout_json = os.path.join(config.get('brenda', 'json_path_1'))
         dics = [x for x in self.doParse(fin_txt)]
-        get_dict = {}
-        for i in range(len(dics)):
-            get_dict[i] = dics[i]
-        with open(fout_json, 'w') as json_f:
-            json.dump(get_dict, json_f, indent=4)
+        return dics  # 直接返回解析得到的字典列表
 
 
 if __name__ == '__main__':
     d = BRENDAParser()
-    d.parse()
+    parsed_data = d.parse()  # This now returns a generator of dictionaries
+    for data in parsed_data:
+        print(data)  # Print the first dictionary
+        break  # Exit after the first iteration

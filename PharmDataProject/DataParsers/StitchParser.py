@@ -31,9 +31,11 @@ class TransformJsonConverter:
 
         print(f"文件 {self.output_file} 转换完成")
 
-# 创建类实例并调用方法
-input_file = '9606.protein_chemical.links.detailed.v5.0.tsv.gz'
-output_file = '9606.protein_chemical.links.detailed.v5.0.json'
 
-converter = TransformJsonConverter(input_file, output_file)
-converter.extract_gz_to_json()
+if __name__ == '__main__':
+    # 创建类实例并调用方法
+    input_file = '9606.protein_chemical.links.detailed.v5.0.tsv.gz'
+    output_file = '9606.protein_chemical.links.detailed.v5.0.json'
+
+    converter = TransformJsonConverter(input_file, output_file)
+    converter.extract_gz_to_json()

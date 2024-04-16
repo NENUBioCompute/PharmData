@@ -29,24 +29,20 @@ class DGIDBParser:
         else:
             return path
 
-    def parse(self, json_path):
-        file = os.path.join(self.data_path, os.listdir(self.data_path)[0])
-        read_file = open(file, 'r').readlines()
+    def parse(self):
+        file_path = os.path.join(self.data_path, os.listdir(self.data_path)[0])
+        with open(file_path, 'r') as file:
+            lines = file.readlines()
 
-        # parse dgi
-        get_dict = {}
-        keys = read_file[0].strip('\n').split('\t')
-        for index, line in enumerate(read_file[1:]):
-            values = line.strip('\n').split('\t')
-            # get_dict[index] = {keys[i]: values[i] for i in range(len(keys))}
-            data = {keys[i]: values[i] for i in range(len(keys))}
-            # print(data)
-            db.collection.insert_one(data)
+        keys = lines[0].strip().split('\t')
+        parsed_data = []
+        for line in lines[1:]:
+            values = line.strip().split('\t')
+            # 确保每个键都有值，使用 None 填充缺失的值
+            data_dict = {keys[i]: (values[i] if i < len(values) else None) for i in range(len(keys))}
+            parsed_data.append(data_dict)
 
-        # write to json
-        # json_file_path = mkpath(json_path) + json_path.split('/')[-2] + '.json'
-        # with open(json_file_path, "w", encoding="utf-8") as jf:
-        #     jf.write(json.dumps(get_dict, indent=4))
+        return parsed_data  # 返回解析的数据字典列表
 
     def to_mongo(self, db):
         json_file_path = self.mkpath(self.json_path) + self.json_path.split('/')[-2] + '.json'
@@ -65,21 +61,14 @@ if __name__ == '__main__':
     cfgfile = '../conf/drugkb.config'
     config.read(cfgfile)
 
-    # Loop through configurations and parse
-    for i in range(0, int(config.get('dgidb', 'data_path_num'))):
+    for i in range(int(config.get('dgidb', 'data_path_num'))):
         data_path = config.get('dgidb', 'data_path_' + str(i + 1))
         json_path = config.get('dgidb', 'json_path_' + str(i + 1))
         db = DBconnection(cfgfile, config.get('dgidb', 'db_name'), config.get('dgidb', 'col_name_' + str(i + 1)))
 
-        # Create an instance of DGIDBParser
         parser = DGIDBParser(data_path, json_path)
+        data = parser.parse()
 
-        # Use the instance to call parse
-        parser.parse(db)
-    # to_mongo
-    # for i in range(0, int(config.get('dgidb', 'json_path_num'))):  # (0, 4)
-    #     db = DBconnection(cfgfile, config.get('dgidb', 'db_name'),
-    #                       config.get('dgidb', 'col_name_' + str(i + 1)))
-    #     print(db.collection)
-    #     to_mongo(config.get('dgidb', 'json_path_' + str(i + 1)), db)
-    #
+        if data:
+            print(data[0])  # 打印第一个元素
+            break  # 处理完第一组数据后停止循环

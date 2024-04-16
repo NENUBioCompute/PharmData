@@ -18,9 +18,10 @@ class FileDownloader:
             file.write(response.content)
         print(f"文件 {self.filename} 下载完成")
 
-# 创建类实例并调用方法
-url = 'http://stitch.embl.de/download/protein_chemical.links.detailed.v5.0/9606.protein_chemical.links.detailed.v5.0.tsv.gz'
-filename = '9606.protein_chemical.links.detailed.v5.0.tsv.gz'
 
-downloader = FileDownloader(url, filename)
-downloader.download_file()
+if __name__ == '__main__':
+    # 创建类实例并调用方法
+    url = 'http://stitch.embl.de/download/protein_chemical.links.detailed.v5.0/9606.protein_chemical.links.detailed.v5.0.tsv.gz'
+    filename = '9606.protein_chemical.links.detailed.v5.0.tsv.gz'
+    downloader = FileDownloader(url, filename)
+    downloader.download_file()

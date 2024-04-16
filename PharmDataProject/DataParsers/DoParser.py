@@ -120,23 +120,36 @@ class DoParser:
                 synonym_list.append(line[8:].strip().split("\"")[1])
                 dic["synonym"] = synonym_list
 
+
             elif line.strip("\n") == "[Term]":
+
                 def_discription = {}
+
                 synonym_list = []
+
                 subset_number_list = []
+
                 xref_list = {}
+
                 xref_id_list = []
+
                 xref_id_value_list = []
+
                 parent = []
+
                 alt_id_number_list = []
-                dic = {}
+
+                if dic:  # Check if dic is not empty
+
+                    newdic.append(dic)
+
+                dic = {}  # Reset for next term
+
+            if dic:  # Ensure the last dictionary is added
+
                 newdic.append(dic)
-        # print(dic)
-        # print(newdic)
-        jsObj = json.dumps(newdic)
-        fileObject = open(self.jsonpath, 'w')
-        fileObject.write(jsObj)
-        fileObject.close()
+
+        return newdic  # Return the list of dictionaries
 
     def to_mongo(self, db):
         with open(self.jsonpath, "r", encoding='utf-8') as f:
@@ -149,12 +162,14 @@ if __name__ == "__main__":
     cfgfile = '../conf/drugkb.config'
     config.read(cfgfile)
 
-    # 为每个数据和JSON路径创建并使用DoParser实例
     for i in range(0, int(config.get('do', 'data_path_num'))):
         datapath = config.get('do', 'data_path_' + str(i + 1))
-        jsonpath = config.get('do', 'json_path_' + str(i + 1))
-        parser = DoParser(datapath, jsonpath)
-        parser.parse()
+        parser = DoParser(datapath, "")
+        data_dicts = parser.parse()
+
+        if data_dicts:
+            print(data_dicts[0])  # 打印第一个字典
+            break  # 成功打印后退出循环
 
     # 如果需要，创建数据库连接并将数据上传到MongoDB
     # for i in range(0, int(config.get('do', 'json_path_num'))):

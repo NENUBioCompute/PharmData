@@ -47,7 +47,7 @@ if __name__ == "__main__":
 
 
     config = configparser.ConfigParser()
-    cfgfile = '../conf/drugkb.config'
+    cfgfile = '../conf/drugkb_test.config'
     config.read(cfgfile)
     for i in range(2, int(config.get('kegg', 'data_path_num'))-2):
         db = DBconnection(cfgfile, config.get('kegg', 'db_name'),
