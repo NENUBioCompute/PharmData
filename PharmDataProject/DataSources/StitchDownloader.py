@@ -7,6 +7,7 @@
 import os
 import subprocess
 import threading
+
 from DownloadKit import DownloadKit
 
 from PharmDataProject.Utilities.FileDealers.ConfigParser import ConfigParser
@@ -21,6 +22,7 @@ class StitchDownloader:
     def __download_and_gunzip(self, filename, url):
         self.DownloadKit.add(url, rename=filename).wait(show=False)
         subprocess.run(["gunzip", os.path.join(self.data_path, filename)])
+        # print(f"{filename} download successfully.")
 
     def start(self):
         urls = [(self.config.get("cc_links_filename"), self.config.get("cc_links_url")),
