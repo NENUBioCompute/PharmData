@@ -11,6 +11,7 @@ import requests
 from lxml import etree
 
 from PharmDataProject.Utilities.Database.dbutils_v2 import DBConnection
+from PharmDataProject.Utilities.FileDealers.ConfigParser import ConfigParser
 
 
 def ua_init():
@@ -54,7 +55,6 @@ class ICD11Parser:
         self.start_time = datetime.now()
         self.retry_queue = queue.Queue()
         self.id_queue = queue.Queue()
-        # self.ip_pool = ["http://127.0.0.1:26881"]
 
     def __get_config_value(self, key):
         return self.config.get("icd11", key)
@@ -85,14 +85,13 @@ class ICD11Parser:
         """
         get root id list
         """
-        root_concepts_url = self.__get_config_value("json_get_root_concepts_url")
+        root_concepts_url = config.get("json_get_root_concepts_url")
         params = {"useHtml": "true"}
         resp = self.__get_resp(root_concepts_url, params)
         if resp is None:
             raise requests.RequestException("Root concept id acquiring failed. Network issue, out of max try.")
         root_data = [(item.get('ID'), item.get('isLeaf')) for item in resp.json()]
-        # for item in resp.json():
-        #     self.__get_children_id(item.get('ID'), item.get('isLeaf'))
+
         threads = [threading.Thread(target=self.__get_children_id, args=(arg[0], arg[1])) for arg in root_data]
         for thread in threads:
             thread.start()
@@ -111,7 +110,7 @@ class ICD11Parser:
                 return
             self.id_queue.put(id)
         else:
-            children_concepts_url = self.__get_config_value("json_get_children_concepts_url")
+            children_concepts_url = config.get("json_get_children_concepts_url")
             params = {
                 "ConceptId": id,
                 "useHtml": "true",
@@ -137,9 +136,9 @@ class ICD11Parser:
                 '\u200b', '').replace("\u3000", '')
             return new_str
 
-        url = self.__get_config_value("get_content_url")
+        url = config.get("get_content_url")
         params = {"ConceptId": id}
-        data = {'url': self.__get_config_value("data_url_prefix") + id}
+        data = {'url': config.get("data_url_prefix") + id}
 
         if self.db.search_record(data) is not None:
             logging.info(f"A saved data record found with ID: {id}")
@@ -212,7 +211,7 @@ class ICD11Parser:
                 return
 
         # save_info
-        threads = [threading.Thread(target=get_data) for _ in range(int(self.__get_config_value("thread_num")))]
+        threads = [threading.Thread(target=get_data) for _ in range(int(config.get("thread_num")))]
         for thread in threads:
             thread.start()
         for thread in threads:
@@ -226,8 +225,8 @@ class ICD11Parser:
 
     def start(self, config):
         self.config = config
-        self.buffer_data_size = int(self.__get_config_value("data_buffer_size"))
-        self.db = DBConnection(self.__get_config_value("db_name"), self.__get_config_value("collection_name"),
+        self.buffer_data_size = int(config.get("data_buffer_size"))
+        self.db = DBConnection(config.get("db_name"), config.get("collection_name"),
                                config=config)
         self.__parse()
         self.db.close()
@@ -239,6 +238,6 @@ if __name__ == '__main__':
                         datefmt='%m/%d %I:%M:%S')
     icd11_parser = ICD11Parser()
     cfg = "/home/zhaojingtong/tmpcode/PharmData/PharmDataProject/conf/drugkb.config"
-    config = configparser.ConfigParser()
-    config.read(cfg)
+    config = ConfigParser(cfg)
+    config.set_section("icd11")
     icd11_parser.start(config)

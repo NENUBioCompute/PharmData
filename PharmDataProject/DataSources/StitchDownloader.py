@@ -15,19 +15,20 @@ from PharmDataProject.Utilities.FileDealers.ConfigParser import ConfigParser
 class StitchDownloader:
     def __init__(self, config):
         self.config = config
-        self.data_path = config.get("stitch", "data_path")
+        self.data_path = config.get("data_path")
         self.DownloadKit = DownloadKit(self.data_path)
 
-    def __download_and_gunzip(self, url):
-        self.DownloadKit.add(url, rename=url.split("/")[-1]).wait(show=False)
+    def __download_and_gunzip(self, filename, url):
+        self.DownloadKit.add(url, rename=filename).wait(show=False)
+        subprocess.run(["gunzip", os.path.join(self.data_path, filename)])
 
     def start(self):
-        urls = [self.config.get("stitch", "cc_links_url"),
-                self.config.get("stitch", "pc_links_detailed_url"),
-                self.config.get("stitch", "pc_links_transfer_url"),
-                self.config.get("stitch", "actions_url")]
+        urls = [(self.config.get("cc_links_filename"), self.config.get("cc_links_url")),
+                (self.config.get("pc_links_detailed_filename"), self.config.get("pc_links_detailed_url")),
+                (self.config.get("pc_links_transfer_filename"), self.config.get("pc_links_transfer_url")),
+                (self.config.get("actions_filename"), self.config.get("actions_url"))]
 
-        threads = [threading.Thread(target=self.__download_and_gunzip, args=(url,)) for url in urls]
+        threads = [threading.Thread(target=self.__download_and_gunzip, args=(filename, url)) for filename, url in urls]
         for thread in threads:
             thread.start()
         for thread in threads:
@@ -36,5 +37,6 @@ class StitchDownloader:
 
 if __name__ == "__main__":
     cfg = "/home/zhaojingtong/tmpcode/PharmData/PharmDataProject/conf/drugkb.config"
-    config = ConfigParser.GetConfig(cfg)
+    config = ConfigParser(cfg)
+    config.set_section("stitch")
     StitchDownloader(config).start()

@@ -1,39 +1,52 @@
 """
   -*- encoding: utf-8 -*-
-  @Author: zhaojingtong
-  @Time  : 2024/04/05 21:32
-  @Email: 2665109868@qq.com
-  @function
+  @Author: Deepwind
+  @Time  : 4/16/2024 14:12 PM
+  @Email: deepwind32@163.com
 """
 import json
 from pymongo import MongoClient
+from tqdm import tqdm
 
-class JsonToMongoDB:
-    def __init__(self, json_file, mongodb_uri, db_name, collection_name):
-        self.json_file = json_file
-        self.mongodb_uri = mongodb_uri
-        self.db_name = db_name
-        self.collection_name = collection_name
+from PharmDataProject.DataParsers.StitchParser import StitchParser
+from PharmDataProject.DataSources.StitchDownloader import StitchDownloader
+from PharmDataProject.Utilities.Database.dbutils_v2 import DBConnection
+from PharmDataProject.Utilities.FileDealers.ConfigParser import ConfigParser
 
-    def import_to_mongodb(self):
-        # 连接 MongoDB
-        client = MongoClient(self.mongodb_uri)
-        db = client[self.db_name]
-        collection = db[self.collection_name]
 
-        # 读取 JSON 文件数据
-        with open(self.json_file, 'r') as f:
-            data = json.load(f)
+class StitchtoMongo:
+    def __init__(self, config):
+        self.config = config
+        self.buffer_data_size = 10000
+        self.buffer_data = []
+        self.db = None
+        self.prefix = config.get("collection_name_prefix")
 
-        # 插入数据到集合中
-        result = collection.insert_many(data)
-        print(f"成功插入 {len(result.inserted_ids)} 条数据到 {self.collection_name} 集合")
+    def __insert(self):
+        self.db.insert(self.buffer_data)
+        self.buffer_data = []
+    def start(self, collection_name, data):
+        print(self.prefix + collection_name)
+        self.db = DBConnection(config.get("db_name"), self.prefix + collection_name, config=config)
+        self.db.insert(data, accelerate=True, counter=True)
+        print("ok")
+        # for file_data in tqdm(data, desc=f"{collection_name} data saving"):
+        #     for line in file_data:
+        #         if len(self.buffer_data) >= self.buffer_data_size:
+        #             self.__insert()
+        #         self.buffer_data.append(line)
+        # if len(self.buffer_data) > 0:
+        #     self.__insert()
 
-# 创建类实例并调用方法
-json_file = '9606.protein_chemical.links.detailed.v5.0.json'
-mongodb_uri = 'mongodb://localhost:27017/'
-db_name = 'mydatabase'
-collection_name = 'mycollection'
 
-json_to_mongodb = JsonToMongoDB(json_file, mongodb_uri, db_name, collection_name)
-json_to_mongodb.import_to_mongodb()
+
+if __name__ == "__main__":
+    cfg = "/home/zhaojingtong/tmpcode/PharmData/PharmDataProject/conf/drugkb.config"
+    config = ConfigParser(cfg)
+    config.set_section("stitch")
+
+    to_mongo = StitchtoMongo(config)
+    # StitchDownloader(config).start()
+
+    for collection_name, data in StitchParser(config).start():
+        to_mongo.start(collection_name, data)

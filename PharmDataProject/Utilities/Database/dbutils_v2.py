@@ -42,10 +42,11 @@ class DBConnection:
         if config is None:
             pass
         else:
-            host = config.get('dbserver', 'host')
-            port = int(config.get('dbserver', 'port').strip())
-            username = config.get('dbserver', 'user')
-            password = config.get('dbserver', 'password')
+            config.set_section('dbserver')
+            host = config.get('host')
+            port = int(config.get('port').strip())
+            username = config.get('user')
+            password = config.get('password')
 
         self.client = pymongo.MongoClient(host, port) \
             if username is None and password is None \
@@ -89,6 +90,7 @@ class DBConnection:
         else:
             logging.info(
                 f"Collection {self.collection_name} conversion complete, time elapsed {time.time() - beginning_time:.2f}s")
+
 
     def assure_empty(self, dbCheck: bool) -> None:
         # If dbCheck is set to True, this method is called before the data is automatically inserted.

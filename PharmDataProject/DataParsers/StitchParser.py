@@ -1,12 +1,11 @@
 """
   -*- encoding: utf-8 -*-
-  @Author: zhaojingtong
-  @Time  : 2024/04/05 21:31
-  @Email: 2665109868@qq.com
-  @function
+  @Author: Deepwind
+  @Time  : 4/15/2024 11:44 PM
+  @Email: deepwind32@163.com
 """
-import gzip
 import os
+import pickle
 import pprint
 
 import pandas as pd
@@ -17,24 +16,41 @@ from PharmDataProject.Utilities.FileDealers.ConfigParser import ConfigParser
 class StitchParser:
     def __init__(self, config):
         self.config = config
-        self.data_path = config.get("smpdb", "data_path")
+        self.data_path = config.get("data_path")
 
-    def __gunzip(self, filepath):
-        with gzip.open(filepath, 'rb') as f_in:
-            content = f_in.read().decode('utf-8')
+    def __read(self, filepath):
+        return pd.read_csv(filepath.replace(".gz", ""), delimiter='\t')
 
-        return pd.read_csv(filepath, delimiter='\t')
-
-    def __concat(self, data1, data2):
-        return pd.concat([data1, data2])
+    def __concat(self, detailed_data, transfer_data):
+        return pd.concat([transfer_data, detailed_data[["experimental", "prediction", "database", "textmining"]]], axis=1)
 
     def start(self):
-        for dir_name in os.listdir(self.data_path):
-            if dir_name.endswith('.gz'):
-                yield self.__gunzip(os.path.join(self.data_path + dir_name))
+        filenames = [self.config.get("cc_links_filename"),
+                     (self.config.get("pc_links_detailed_filename"), self.config.get("pc_links_transfer_filename")),
+                     self.config.get("actions_filename")]
+        collections = [self.config.get("cc_links_collection"),
+                       self.config.get("pc_links_collection"),
+                       self.config.get("actions_collection")]
+        for i, filename in enumerate(filenames):
+            if i == 0:
+                pass
+                # with open("./data.b","rb") as f:
+                #     yield self.config.get("cc_links_collection"), pickle.load(f)
+                # yield (collections[0],
+                #        self.__read(os.path.join(self.data_path + filename)).to_dict(orient='records'))
+            elif i == 1:
+                pass
+                # yield (collections[1],
+                #        self.__concat(self.__read(os.path.join(self.data_path, filename[0])),
+                #                      self.__read(os.path.join(self.data_path, filename[1]))).to_dict(orient='records'))
+            elif i == 2:
+                yield (collections[2],
+                       self.__read(os.path.join(self.data_path, filename)).to_dict(orient='records'))
+
 
 if __name__ == "__main__":
     cfg = "/home/zhaojingtong/tmpcode/PharmData/PharmDataProject/conf/drugkb.config"
-    config = ConfigParser.GetConfig(cfg)
+    config = ConfigParser(cfg)
+    config.set_section("stitch")
     for i in StitchParser(config).start():
         pprint.pprint(i)
