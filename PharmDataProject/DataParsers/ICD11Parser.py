@@ -1,4 +1,3 @@
-import configparser
 import logging
 import queue
 import random
@@ -229,7 +228,6 @@ class ICD11Parser:
         self.db = DBConnection(config.get("db_name"), config.get("collection_name"),
                                config=config)
         self.__parse()
-        self.db.close()
 
 
 if __name__ == '__main__':
