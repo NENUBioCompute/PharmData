@@ -7,10 +7,12 @@
 """
 import json
 import logging
+import os.path
 import time
 from collections import deque
 
 import pymongo
+from bson.objectid import ObjectId
 from tqdm import tqdm
 
 from PharmDataProject.Utilities.FileDealers.ConfigParser import ConfigParser
@@ -118,23 +120,30 @@ class DBConnection:
     def search_record(self, query: dict) -> dict:
         return self.collection.find_one(query)
 
-    def print_struct_fields(self, collection_name: str, str_max_len=40):
+    def print_struct_fields(self, collection_name: str, str_max_len=40, save_as_file=False, file_path="./"):
         """
         automatic travel all doc to find the most detailed fields.
         :param collection_name: mongo collection name, can give any collection name in this db.
         :param str_max_len: max length of string type field
+        :param save_as_file: bool, whether to save fields info as json file
         """
         self.str_max_len = str_max_len
         collection = self.db[collection_name]
-        for doc in tqdm(collection.find()):
+        for doc in tqdm(collection.find(), desc=collection_name):
             self.field_dfs(doc, self.collection_structure)
         # TODO add fields analyze function
-        print(json.dumps(self.collection_structure, indent=4))
+        if save_as_file:
+            with open(os.path.join(file_path, f"{collection_name}.json"), "w") as f:
+                json.dump(self.collection_structure, f, indent=4)
+        else:
+            print(json.dumps(self.collection_structure, indent=4))
 
     def field_dfs(self, data, structure):
         if isinstance(data, dict):
             for key, value in data.items():
-                if structure.get(key, None) is None or isinstance(structure[key], (dict, list)):
+                if not structure.get(key, None) or isinstance(structure[key], (dict, list)):
+                    if isinstance(value, ObjectId):
+                        continue
                     if value is None or isinstance(value, (int, float, str, bool)):
                         structure[key] = value[:self.str_max_len] if isinstance(value, str) else value
                     elif isinstance(value, list):
@@ -149,7 +158,9 @@ class DBConnection:
 
         elif isinstance(data, list):
             for value in data:
-                if structure[0] is None or isinstance(structure[0], (dict, list)):
+                if not structure[0] or isinstance(structure[0], (dict, list)):
+                    if isinstance(value, ObjectId):
+                        continue
                     if value is None or isinstance(value, (int, float, str, bool)):
                         structure[0] = value[:self.str_max_len] if isinstance(value, str) else value
                     elif isinstance(value, list):
@@ -168,6 +179,8 @@ class DBConnection:
 
         return structure
 
+    def close(self):
+        self.client.close()
 
 if __name__ == "__main__":
     # The following is a usage example
@@ -176,13 +189,11 @@ if __name__ == "__main__":
                         datefmt='%m/%d %I:%M:%S')
     # insert data into collection "offsides" in database "drugdb" whose server at "59.168.1.100"
     # disable collection empty check
-    # drugDB = DBConnection("drugdb", "offsides", "59.168.1.100", username="root", password="pw123", empty_check=False)
+    drugDB = DBConnection("drugdb", "offsides", "59.168.1.100", username="root", password="pw123", empty_check=False)
     # If you use config
     cfg_file = "../../conf/drugkb.config"
     config = ConfigParser(cfg_file)
-    # drugDB = DBConnection("drugdb", "offsides", config=config)
-    db = DBConnection("PharmRG", "source_drugbank", empty_check=False, config=config)
-
+    drugDB = DBConnection("drugdb", "offsides", config=config)
     """
     Recommend Usage
     # large data case, you should pass a generator
