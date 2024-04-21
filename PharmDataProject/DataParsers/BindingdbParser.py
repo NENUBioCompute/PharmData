@@ -1,55 +1,89 @@
 """
   -*- encoding: utf-8 -*-
-  @Author : gaoqingshan
-  @Time   : 2023/10/8 17:33
-  @Email  : 519546702@qq.com
-  @function
+  @Author: zhuliujinxiang
+  @Time  : 2023/10/10 21:53
+  @Email: deepwind32@163.com
+  @function 
 """
+import logging
 import csv
-import collections
-import configparser
-
-config = configparser.ConfigParser()
-cfgfile = "../conf/drugkb.config"
-config.read(cfgfile)
-
-target_fields = [
-    'bindingdb Target Chain  Sequence',
-    'PDB ID(s) of Target Chain',
-    'UniProt (SwissProt) Recommended Name of Target Chain',
-    'UniProt (SwissProt) Entry Name of Target Chain',
-    'UniProt (SwissProt) Primary ID of Target Chain',
-    'UniProt (SwissProt) Secondary ID(s) of Target Chain',
-    'UniProt (SwissProt) Alternative ID(s) of Target Chain',
-    'UniProt (TrEMBL) Submitted Name of Target Chain',
-    'UniProt (TrEMBL) Entry Name of Target Chain',
-    'UniProt (TrEMBL) Primary ID of Target Chain',
-    'UniProt (TrEMBL) Secondary ID(s) of Target Chain',
-    'UniProt (TrEMBL) Alternative ID(s) of Target Chain',
-]
-chains_key = 'Number of Protein Chains in Target (>1 implies a multichain complex)'
 
 
-def parse_bindingdb(path):
-    """
-    :param path:
-    """
-    csv.register_dialect('mydialect', delimiter='\t', quoting=csv.QUOTE_ALL)
-    with open(path, 'r', encoding='utf-8') as csvfile:
-        reader = csv.reader(csvfile, dialect='mydialect')
-        header = next(reader)
-        chains_index = header.index(chains_key)
-        target0_index = chains_index + 1
-        ligand_fields = header[:chains_index + 1]
-        for k, row in enumerate(reader):
-            ligand_values = row[:chains_index + 1]
-            rowdict = collections.OrderedDict(zip(ligand_fields, ligand_values))
-            chains = []
-            for i in range(int(rowdict[chains_key])):
-                i_0 = target0_index + i * len(target_fields)
-                i_1 = target0_index + (i + 1) * len(target_fields)
-                target_values = row[i_0:i_1]
-                chain = collections.OrderedDict(zip(target_fields, target_values))
-                chains.append(chain)
-            rowdict['chains'] = chains
-            yield rowdict
+class BindingdbParser:
+    def __init__(self, csv_path: str, all_field=True):
+        self.csv_path = csv_path
+        self.csv_property = {"newline": '\n', "encoding": 'utf-8', "delimiter": ','}
+        self.selected_fields = []
+        self.removed_fields = []
+        self.all_field = all_field
+
+    def set_csv_property(self, newline='\n', encoding='utf-8', delimiter=',') -> None:
+        """
+        Set the read properties of the CSV file
+        :param newline: Delimiter between lines in the CSV file, default "\\n"
+        :param encoding: CSV file encoding, default is "utf-8"
+        :param delimiter: Delimiter between fields in the CSV file, default is ","
+        :return: None
+        """
+        self.csv_property = {"newline": newline, "encoding": encoding, "delimiter": delimiter}
+
+    def set_fields(self, fields_needed: list[str] = None, fields_removed: list[str] = None) -> None:
+        """
+        Set the fields that you want to keep or delete.
+        :param fields_needed: Field to be reserved. The format is [field_name1, field_name2].
+        :param fields_removed: Field to be deleted. The format is [field_name1, field_name2].
+        :return: None
+        """
+        if fields_needed and fields_removed:
+            logging.warning(
+                "Parameter error! The fields that need to be kept and the fields that need to be deleted cannot be given at the same time!")
+            raise SyntaxError(
+                "The fields that need to be kept and the fields that need to be deleted cannot be given at the same time!")
+        if not (fields_needed or fields_removed):
+            return
+        if fields_needed:
+            self.selected_fields = fields_needed
+        elif fields_removed:
+            self.removed_fields = fields_removed
+
+    def parse(self) -> iter:
+        """
+        Parses the data in the specified CSV file.
+        :return: iter
+        """
+        with open(self.csv_path, 'r', newline=self.csv_property["newline"],
+                  encoding=self.csv_property["encoding"]) as csvfile:
+            db_reader = csv.reader(csvfile, delimiter=self.csv_property["delimiter"])
+            header = next(db_reader)
+            field_allowed = list(range(len(header)))
+
+            if not self.all_field:
+                try:
+                    if self.selected_fields:
+                        field_allowed = []
+                        for field in self.selected_fields:
+                            field_allowed.append(header.index(field))
+                    elif self.removed_fields:
+                        field_allowed = [i for i in field_allowed if
+                                         i not in [header.index(field) for field in self.removed_fields]]
+                except ValueError as e:
+                    logging.warning(e)
+                    raise ValueError("The specified field does not exist") from e
+
+            header = [header[i] for i in field_allowed]
+            logging.info(f"The reserved field is {header}")
+            for row in db_reader:
+                drug = dict(zip(header, [row[i] for i in field_allowed]))
+                yield drug
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO,
+                        format='%(asctime)s %(levelname)s %(message)s',
+                        datefmt='%m/%d %I:%M:%S')
+    csv_path = r"D:\my files\Work\当前项目\2023 PharmRG\drug database\data\OFFSIDES.csv"
+    iter_drug = BindingdbParser(csv_path).parse()
+    for index, item in enumerate(iter_drug):
+        if index == 5:
+            break
+        print(item)
