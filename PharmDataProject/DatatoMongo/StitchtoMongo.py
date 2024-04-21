@@ -1,39 +1,34 @@
 """
   -*- encoding: utf-8 -*-
-  @Author: zhaojingtong
-  @Time  : 2024/04/05 21:32
-  @Email: 2665109868@qq.com
-  @function
+  @Author: Deepwind
+  @Time  : 4/16/2024 14:12 PM
+  @Email: deepwind32@163.com
 """
-import json
-from pymongo import MongoClient
+from PharmDataProject.DataParsers.StitchParser import StitchParser
+from PharmDataProject.DataSources.StitchDownloader import StitchDownloader
+from PharmDataProject.Utilities.Database.dbutils_v2 import DBConnection
+from PharmDataProject.Utilities.FileDealers.ConfigParser import ConfigParser
 
-class JsonToMongoDB:
-    def __init__(self, json_file, mongodb_uri, db_name, collection_name):
-        self.json_file = json_file
-        self.mongodb_uri = mongodb_uri
-        self.db_name = db_name
-        self.collection_name = collection_name
 
-    def import_to_mongodb(self):
-        # 连接 MongoDB
-        client = MongoClient(self.mongodb_uri)
-        db = client[self.db_name]
-        collection = db[self.collection_name]
+class StitchtoMongo:
+    def __init__(self, config):
+        self.config = config
+        self.db = None
+        self.prefix = config.get("collection_name_prefix")
 
-        # 读取 JSON 文件数据
-        with open(self.json_file, 'r') as f:
-            data = json.load(f)
+    def start(self, collection_name, data):
+        self.db = DBConnection(config.get("db_name"), self.prefix + collection_name, config=config)
+        for i in data:
+            self.db.insert(i, accelerate=True, buffer_size=100000)
 
-        # 插入数据到集合中
-        result = collection.insert_many(data)
-        print(f"成功插入 {len(result.inserted_ids)} 条数据到 {self.collection_name} 集合")
 
-# 创建类实例并调用方法
-json_file = '9606.protein_chemical.links.detailed.v5.0.json'
-mongodb_uri = 'mongodb://localhost:27017/'
-db_name = 'mydatabase'
-collection_name = 'mycollection'
+if __name__ == "__main__":
+    cfg = "/home/zhaojingtong/tmpcode/PharmData/PharmDataProject/conf/drugkb.config"
+    config = ConfigParser(cfg)
+    config.set_section("stitch")
 
-json_to_mongodb = JsonToMongoDB(json_file, mongodb_uri, db_name, collection_name)
-json_to_mongodb.import_to_mongodb()
+    to_mongo = StitchtoMongo(config)
+    StitchDownloader(config).start()
+
+    for collection_name, data in StitchParser(config).start():
+        to_mongo.start(collection_name, data)

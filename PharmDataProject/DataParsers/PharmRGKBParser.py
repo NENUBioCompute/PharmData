@@ -11,10 +11,9 @@ import pandas as pd
 import sys
 
 
-
 class PharmGKBParser:
 
-    def __parse(self,config):
+    def __parse(self, config):
         section = 'pharmgkb'
         tables = config.get(section, 'tables')[1:-1].split(',')
         for idx in range(int(config.get(section, 'col_num'))):
@@ -27,7 +26,7 @@ class PharmGKBParser:
 
             self.__csv2json(fin_csv, fout_json, sep='\t')
 
-    def replace_nan_with_empty(self,data):
+    def replace_nan_with_empty(self, data):
         for key, value in data.items():
             if isinstance(value, dict):
                 self.replace_nan_with_empty(value)  # 递归处理嵌套的字典
@@ -37,7 +36,8 @@ class PharmGKBParser:
                         self.replace_nan_with_empty(item)  # 递归处理嵌套的字典
             elif pd.isna(value):  # 检查是否为 NaN
                 data[key] = ''  # 将 NaN 替换为空值
-    def __csv2json(self,fin_csv, fout_json, sep='\t'):
+
+    def __csv2json(self, fin_csv, fout_json, sep='\t'):
         '''
         1.stroe csv file to mongodb
         2.replace ' ' to '_',replace '. to '__'
@@ -45,7 +45,7 @@ class PharmGKBParser:
         :param fin_csv:
         :param firstname: db name in mongodb
         :param secondname: table name in mongodb
-        :param sep: \t, , and so on
+        :param sep: \t , and so on
         :return:
         '''
         if '.tsv' in fin_csv:
@@ -59,11 +59,10 @@ class PharmGKBParser:
             for i in t:
                 self.replace_nan_with_empty(i)
 
-
         with open(fout_json, 'w') as json_f:
             json.dump(t, json_f, indent=4)
 
-    def __parseCsv(self,fin_csv, sep='\t'):
+    def __parseCsv(self, fin_csv, sep='\t'):
         df = pd.read_csv(fin_csv, sep=sep)
         titles = []
         for head in df.columns:
@@ -72,7 +71,7 @@ class PharmGKBParser:
         dicts = df.T.to_dict()
         return dicts
 
-    def __result(self,dic):
+    def __result(self, dic):
         '''
         :param iter: csv parsed into one dict
         :return: list of the dict value
@@ -80,7 +79,7 @@ class PharmGKBParser:
         for v in dic.values():
             yield v
 
-    def __parsePathway(self,dirin, sep='\t'):
+    def __parsePathway(self, dirin, sep='\t'):
         dics = []
         for eachfile in os.listdir(dirin):
             if 'PA' not in eachfile: continue
@@ -98,8 +97,10 @@ class PharmGKBParser:
                 dic['content'].append(x)
             dics.append(dic)
         return dics
+
     def start(self, config):
         self.__parse(config)
+
 
 if __name__ == '__main__':
     pharmGKBParser = PharmGKBParser()

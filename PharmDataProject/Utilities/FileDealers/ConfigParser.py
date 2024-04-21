@@ -11,7 +11,7 @@ import os.path
 class ConfigParser:
 
     @staticmethod
-    def GetConfig(path):
+    def get_config(path):
         '''
         Read the configuration file
         @return:config object
@@ -27,6 +27,22 @@ class ConfigParser:
             else:
                 return config
 
+    def __init__(self, path):
+        self.config = self.get_config(path)
+        self.section = None
+        if self.config is None:
+            raise Exception("Config file not found")
+
+    def set_section(self, section):
+        self.section = section
+
+    def get(self, option, section=None):
+        if section is None:
+            section = self.section
+        if section is None:
+            raise Exception("Config section not found")
+        return self.config.get(section, option)
+
 
 if __name__ == '__main__':
-    ConfigParser.GetConfig(r'C:\Users\15717\Desktop\DrugMapProject\Data\conf\drugkb.config')
+    ConfigParser.get_config(r'C:\Users\15717\Desktop\DrugMapProject\Data\conf\drugkb.config')

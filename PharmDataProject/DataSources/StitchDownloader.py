@@ -1,26 +1,44 @@
 """
   -*- encoding: utf-8 -*-
-  @Author: zhaojingtong
-  @Time  : 2024/04/05 21:31
-  @Email: 2665109868@qq.com
-  @function
+  @Author: Deepwind
+  @Time  : 4/15/2024 11:04 PM
+  @Email: deepwind32@163.com
 """
-import requests
+import os
+import subprocess
+import threading
 
-class FileDownloader:
-    def __init__(self, url, filename):
-        self.url = url
-        self.filename = filename
+from DownloadKit import DownloadKit
 
-    def download_file(self):
-        response = requests.get(self.url)
-        with open(self.filename, 'wb') as file:
-            file.write(response.content)
-        print(f"文件 {self.filename} 下载完成")
+from PharmDataProject.Utilities.FileDealers.ConfigParser import ConfigParser
 
-# 创建类实例并调用方法
-url = 'http://stitch.embl.de/download/protein_chemical.links.detailed.v5.0/9606.protein_chemical.links.detailed.v5.0.tsv.gz'
-filename = '9606.protein_chemical.links.detailed.v5.0.tsv.gz'
 
-downloader = FileDownloader(url, filename)
-downloader.download_file()
+class StitchDownloader:
+    def __init__(self, config):
+        self.config = config
+        self.data_path = config.get("data_path")
+        self.DownloadKit = DownloadKit(self.data_path)
+
+    def __download_and_gunzip(self, filename, url):
+        self.DownloadKit.add(url, rename=filename).wait(show=False)
+        subprocess.run(["gunzip", os.path.join(self.data_path, filename)])
+        # print(f"{filename} download successfully.")
+
+    def start(self):
+        urls = [(self.config.get("cc_links_filename"), self.config.get("cc_links_url")),
+                (self.config.get("pc_links_detailed_filename"), self.config.get("pc_links_detailed_url")),
+                (self.config.get("pc_links_transfer_filename"), self.config.get("pc_links_transfer_url")),
+                (self.config.get("actions_filename"), self.config.get("actions_url"))]
+
+        threads = [threading.Thread(target=self.__download_and_gunzip, args=(filename, url)) for filename, url in urls]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+
+
+if __name__ == "__main__":
+    cfg = "/home/zhaojingtong/tmpcode/PharmData/PharmDataProject/conf/drugkb.config"
+    config = ConfigParser(cfg)
+    config.set_section("stitch")
+    StitchDownloader(config).start()
