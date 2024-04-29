@@ -27,9 +27,9 @@ class ConfigParser:
             else:
                 return config
 
-    def __init__(self, path):
+    def __init__(self, path, section=None):
         self.config = self.get_config(path)
-        self.section = None
+        self.section = section
         if self.config is None:
             raise Exception("Config file not found")
 

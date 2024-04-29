@@ -47,11 +47,10 @@ class DBConnection:
         if config is None:
             pass
         else:
-            config.set_section('dbserver')
-            host = config.get('host')
-            port = int(config.get('port').strip())
-            username = config.get('user')
-            password = config.get('password')
+            host = config.get('host', 'dbserver')
+            port = int(config.get('port', 'dbserver').strip())
+            username = config.get('user', 'dbserver')
+            password = config.get('password', 'dbserver')
 
         self.client = pymongo.MongoClient(host, port) \
             if username is None and password is None \
@@ -181,6 +180,37 @@ class DBConnection:
 
     def close(self):
         self.client.close()
+
+    def get_iter(self, collection_name: str):
+        return self.db[collection_name].find()
+
+    def set_col(self, col):
+        self.collection = self.db[col]
+
+    def find_one(self, query, target_col=""):
+        if not target_col:
+            return self.collection.find_one(query)
+        else:
+            return self.db[target_col].find_one(query)
+
+    def find_many(self, query, target_col=""):
+        if not target_col:
+            return self.collection.find(query)
+        else:
+            return self.db[target_col].find(query)
+
+    def update_one(self, query, update, target_col=""):
+        if not target_col:
+            return self.collection.update_one(query, update)
+        else:
+            return self.db[target_col].update_one(query, update)
+
+    def delete_one(self, query, target_col=""):
+        if not target_col:
+            return self.collection.delete_one(query)
+        else:
+            return self.db[target_col].delete_one(query)
+
 
 if __name__ == "__main__":
     # The following is a usage example
