@@ -211,6 +211,12 @@ class DBConnection:
         else:
             return self.db[target_col].delete_one(query)
 
+    def update_one(self, query, update, target_col=""):
+        if not target_col:
+            return self.collection.update_one(query, update)
+        else:
+            return self.db[target_col].update_one(query, update)
+
 
 if __name__ == "__main__":
     # The following is a usage example
