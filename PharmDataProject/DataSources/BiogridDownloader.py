@@ -13,8 +13,8 @@ import logging
 import requests
 import urllib.error
 from zipfile import ZipFile
-from FileSystem import folder_is_exists
-from HttpDownloader import HTTP
+from PharmDataProject.Utilities.FileDealers.FileSystem import folder_is_exists
+from PharmDataProject.Utilities.NetDownloads.HttpDownloader import HTTP
 import wget
 # from DrugMapProject.Utilities.NetDownloads.HttpDownloader import HTTP
 # from DrugMapProject.Utilities.FileDealers.ConfigParser import ConfigParser

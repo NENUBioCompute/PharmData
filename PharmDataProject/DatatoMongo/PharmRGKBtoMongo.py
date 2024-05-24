@@ -76,3 +76,11 @@ class Pharmgkb_Mongo_Factory:
 
     pharmrg_mongo = Pharmgkb_Mongo()
     pharmrg_mongo.start()
+
+
+if __name__ == "__main__":
+    # 创建 Pharmgkb_Mongo 类的实例
+    pharmgkb_mongo = Pharmgkb_Mongo_Factory.create_Pharmgkb_Mongo()
+
+    # 开始执行数据导入
+    pharmgkb_mongo.start()

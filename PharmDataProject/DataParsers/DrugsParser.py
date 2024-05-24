@@ -1,30 +1,27 @@
 import requests
 from bs4 import BeautifulSoup
 from pymongo import MongoClient
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import time
+
 # client = MongoClient("localhost", 27017, username="readwrite", password="readwrite")
-client = MongoClient("59.73.198.168", 27017,username="readwrite", password="readwrite")
+client = MongoClient("59.73.198.168", 27017, username="readwrite", password="readwrite")
 db = client["PharmRG"]
 
 collection = db["source_drugs"]
 url_list = []
 
+
 # 发送GET请求获取网页内容
 class DrugLinkCrawler:
-
-
-    def get_url(self,i,j):
-        print(i,j)
-
+    def get_url(self, i, j):
+        print(i, j)  # 可以选择保留或移除这行，根据你的需求来监控当前处理的字符
         visited_links = set()  # 存储已访问过的链接
         url = f'https://www.drugs.com/alpha/{chr(i)}{chr(j)}.html'
         headers = {
-        "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"
         }
-
-        # headers = copy_headers_dict(headers)
         response = requests.get(url=url, headers=headers)
 
         # 检查响应状态码
@@ -40,13 +37,10 @@ class DrugLinkCrawler:
                         if link not in visited_links:  # 检查是否已经访问过
                             visited_links.add(link)  # 添加到已访问集合中
                             full_link = "https://www.drugs.com" + link
-
-                            # 发送HTTP请求获取网页内容
                             url_list.append(full_link)
-                            print(full_link)
-                            # print(len(url_list))
         else:
             print(response)
+
     def muilt_url(self):
         with ThreadPoolExecutor(max_workers=5) as executor:
             for i in range(97, 123):
@@ -57,118 +51,75 @@ class DrugLinkCrawler:
 
 class Parsedata:
 
-    def GetData(self,url):
+    def GetData(self, url):
         response = requests.get(url)
         html = response.text
-
-        # 创建Beautiful Soup对象
         soup = BeautifulSoup(html, 'html.parser')
 
-        # 查找class为contentBox的盒子
-        # content_box = soup.find('div', class_="contentBox")
-        content_box = soup.find(id="content")
-        # 获取h1标签内容
-        drug_name = content_box.find('h1').text
+        # 获取药物名称
+        drug_name = soup.find('h1').text if soup.find('h1') else None
 
-        # 获取class为drug-subtitle的段落内容
-        # 找到 drug_subtitle 元素
-        drug_subtitle = soup.find('p', class_='drug-subtitle')
-
-        # 创建一个空字典来存储字段名和字段值
-        drug_info = {}
-
-        # 检查是否找到 drug_subtitle 元素
-        if drug_subtitle is not None:
-            # 遍历所有的<b>标签
-            for element in drug_subtitle.find_all('b'):
-                field_name = element.string.strip()[:-1]
-                field_name = field_name.split(':')[0]
-
-                # 获取当前标签之后的所有兄弟元素
-                siblings = element.find_next_siblings()
-
-                field_value = ''
-                # 遍历所有兄弟元素
-                for sibling in siblings:
-                    # 如果当前兄弟元素是字符串，则将其文本内容添加到字段值（跳过空白字符）
-                    if isinstance(sibling, str):
-                        sibling_value = sibling.strip()
-                        if sibling_value:
-                            field_value += sibling_value
-                    # 如果当前兄弟元素是<br>标签，结束提取内容
-                    elif sibling.name == 'br':
-                        break
-                    # 如果当前兄弟元素是<a>标签，则将其文本内容添加到字段值
-                    elif sibling.name == 'a' or 'p':
-                        field_value += sibling.text.strip()
-                    elif sibling.name == 'i':
-                        field_value += sibling.string.strip()
-                drug_info[field_name] = field_value
-
-        else:
-            generic_name = brand_name = dosage_form = drug_class = None
-
-        # 输出指定的四个字段的值，如果为空则输出 None
-        generic_name = drug_info.get("Generic name", None)
-        brand_name = drug_info.get("Brand name", None)
-        dosage_form = drug_info.get("Dosage form", None)
-        drug_class = drug_info.get("Drug class", None)
-
-        # 获取h2标签及其后续标签的内容
-        def get_section_content(h2_id):
-            section_tag = soup.find(id=h2_id)
-            if section_tag:
-                section_content = section_tag.text
-                next_element = section_tag.next_sibling
-                while next_element and next_element.name != "h2":
-                    if next_element.name == "p":
-                        section_content += "\n" + next_element.text
-                    next_element = next_element.next_sibling
-                return section_content
-            else:
-                return None
-
-        uses = get_section_content("uses")
-        warnings = get_section_content("warnings")
-        interactions = get_section_content("interactions")
-        side_effects = get_section_content("side-effects")
-        dosage = get_section_content("dosage")
-
-        # 返回结果
-        result = {
-            "drug_name": drug_name,
-            "generic name": generic_name,
-            "brand name": brand_name,
-            "dosage form": dosage_form,
-            "drug class": drug_class,
-            "uses": uses,
-            "warnings": warnings,
-            "interactions": interactions,
-            "side_effects": side_effects,
-            "dosage": dosage
+        drug_info = {
+            'drug_name': drug_name,
+            'fields': {}
         }
-        collection.insert_one(result)
-        # print(result)
-    def muilt_url_2(self,useless):
+
+        # 获取副标题信息
+        drug_subtitle = soup.find('p', class_='drug-subtitle')
+        if drug_subtitle:
+            for element in drug_subtitle.find_all('b'):
+                field_name = element.text.strip()[:-1]
+                field_value = ''.join(
+                    [sib.text.strip() for sib in element.next_siblings if getattr(sib, 'name', None) != 'br'])
+                drug_info['fields'][field_name] = field_value
+
+        # 从h2标签中获取更多信息
+        def get_section_content(h2_id):
+            content = ''
+            section = soup.find(id=h2_id)
+            while section:
+                section = section.find_next_sibling()
+                if section and section.name == 'p':
+                    content += section.text.strip() + '\n'
+                else:
+                    break
+            return content.strip()
+
+        for section_id in ['uses', 'warnings', 'interactions', 'side-effects', 'dosage']:
+            content = get_section_content(section_id)
+            if content:
+                drug_info[section_id] = content
+
+        return drug_info
+
+    def save_to_mongo(self, data, collection):
+        if data:
+            collection.insert_one(data)
+            print('Data saved to MongoDB:', data)
+
+    def muilt_url_2(self, urls, collection):
         with ThreadPoolExecutor(max_workers=5) as executor:
-            for url in useless:
-                executor.submit(self.GetData,url)
-            executor.shutdown(wait=True)
+            future_to_url = {executor.submit(self.GetData, url): url for url in urls}
+            for future in as_completed(future_to_url):
+                url = future_to_url[future]
+                try:
+                    data = future.result()
+                    self.save_to_mongo(data, collection)
+                except Exception as exc:
+                    print(f'{url} generated an exception: {exc}')
+
 
 if __name__ == '__main__':
     start_time = time.time()
-    DrugLinkCrawler = DrugLinkCrawler()
-    DrugLinkCrawler.muilt_url()
+    crawler = DrugLinkCrawler()
+    urls = crawler.muilt_url()  # 假设这个方法返回所有有效的URL列表
+
+    # 现在我们只关心第一个URL，因此仅获取并处理第一个URL
+    if urls:
+        parser = Parsedata()
+        first_drug_data = parser.GetData(urls[0])
+        print(first_drug_data)  # 打印出第一个字典
+        # 如果需要停止后续操作，直接使用break或不继续其它操作
 
     end_time = time.time()
-    print(f"shijianwei{end_time-start_time}")
-    sets = set(url_list)
-    useless = list(sets)
-    print(len(useless))
-    start_time2 = time.time()
-    parsedata = Parsedata()
-    parsedata.muilt_url_2(useless)
-    end_time2 = time.time()
-    print(f"shijianwei22222{end_time2 - start_time2}")
-
-
+    print(f"Total time taken: {end_time - start_time} seconds")

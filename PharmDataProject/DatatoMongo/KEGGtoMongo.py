@@ -5,7 +5,13 @@
   @Email: 2762376919@qq.com
   @function
 """
+import pymongo
+import json
 
+import requests
+from Bio.KEGG import REST
+from pymongo.collection import Collection
+from pymongo.database import Database
 import configparser
 from PharmDataProject.Utilities.Database.dbutils import DBconnection
 import os
@@ -41,7 +47,7 @@ if __name__ == "__main__":
 
 
     config = configparser.ConfigParser()
-    cfgfile = '../conf/drugkb.config'
+    cfgfile = '../conf/drugkb_test.config'
     config.read(cfgfile)
     for i in range(2, int(config.get('kegg', 'data_path_num'))-2):
         db = DBconnection(cfgfile, config.get('kegg', 'db_name'),
