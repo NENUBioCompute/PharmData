@@ -455,7 +455,7 @@ def toJson(dics, fout_json):
         json.dump(dics, json_f, indent=4)
 
 
-def parse(cfgfile='../conf/drugkb.config'):
+def parse(cfgfile='../conf/drugkb_test.config'):
     config = configparser.ConfigParser()
     # cfgfile = '../../../conf/drugkb.config'
     config.read(cfgfile)

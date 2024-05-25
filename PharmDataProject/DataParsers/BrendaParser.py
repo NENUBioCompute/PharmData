@@ -1,25 +1,25 @@
-# @Author :F
-# @Time :2022/10/30
 import os
 import json
 import configparser
-from PharmDataProject.Utilities.FileDealers import FileSystem
 import re
 import sys
+from tqdm import tqdm  # 进度条库
 
 class BRENDAParser:
 
+    def __init__(self):
+        pass
+
     def brendaTxt2Dict(self, fin):
-        infos = []
-        secElem = {}
         with open(fin, 'r') as fo:
             current_section = ''
             seq = ''
+            secElem = {}
             line = fo.readline()
-            while (line):
+            while line:
                 if '///' in line and secElem != {}:
                     if current_section != '':
-                        if current_section not in secElem.keys():
+                        if current_section not in secElem:
                             secElem[current_section] = []
                         secElem[current_section].append(seq.replace('\n', ' ').strip())
                     yield secElem
@@ -33,11 +33,10 @@ class BRENDAParser:
                         if current_section != '':
                             if current_section == 'ID':
                                 secElem['ID'] = seq.replace('\n', ' ').strip()
-                                pass
                             elif current_section in ['RN', 'SN']:
                                 secElem[current_section] = seq.replace('\n', ' ').strip()
                             else:
-                                if current_section not in list(secElem.keys()):
+                                if current_section not in secElem:
                                     secElem[current_section] = []
                                 secElem[current_section].append(seq.replace('\n', ' ').strip())
                         current_section = section
@@ -60,7 +59,8 @@ class BRENDAParser:
             if '>;' in commentStr:
                 commentStr = commentStr.replace('>;', '>')
                 for com in commentStr.split('>'):
-                    if com == '': continue
+                    if com == '':
+                        continue
                     com = '%s>' % com.strip()
                     commentaryList.append(self.support_handleComment(com))
                 dic[subkey] = commentaryList
@@ -76,7 +76,8 @@ class BRENDAParser:
             if '>;' in commentStr:
                 commentStr = commentStr.replace('>;', '>')
                 for com in commentStr.split('>'):
-                    if com == '': continue
+                    if com == '':
+                        continue
                     com = '%s>' % com.strip()
                     commentaryList.append(self.support_handleComment(com))
                 dic[subkey] = commentaryList
@@ -87,9 +88,7 @@ class BRENDAParser:
 
     def handleNSP(self, elem, key='NSP', subkey='des'):
         for idx, item in enumerate(elem[key]):
-            dic = {}
-            dic['substrates'] = {}
-            dic['products'] = {}
+            dic = {'substrates': {}, 'products': {}}
             item, dic['substrates'] = self.support_handelRE(item, dic['substrates'])  # handle (#...>)
             item, dic['products'] = self.support_handelNSP(item, dic['products'])  # handle |#...>|
             dic['PR'], dic[subkey], dic['RF'] = self.re_match(item)  # handle #...#...<>
@@ -97,7 +96,8 @@ class BRENDAParser:
                 reversibilty = dic[subkey][dic[subkey].index('{') + 1:dic[subkey].index('}')]
                 dic['reversibilty'] = reversibilty
                 dic[subkey] = dic[subkey].replace('{%s}' % reversibilty, '').strip()
-            if ' =' in dic[subkey]: dic['substrates']['des'], dic['products']['des'] = dic[subkey].split(' =', 1)
+            if ' =' in dic[subkey]:
+                dic['substrates']['des'], dic['products']['des'] = dic[subkey].split(' =', 1)
             elem[key][idx] = dic
         return elem
 
@@ -106,15 +106,16 @@ class BRENDAParser:
         for idx, item in enumerate(term):
             dic = {}
             item, dic = self.support_handelRE(item, dic)
-            # result = re.search('#(\d+)#(.*?)<(.*?)>', item)
             dic['id'], dic['organism'], dic['RF'] = self.re_match(item)
             dic['organism'] = dic['organism'].strip()
             if 'UniProt' in dic['organism']:
                 result = re.search('(.*?)(\S+) UniProt', dic['organism'])
-                if result: dic['organism'], dic['UniProt'] = result.groups()
+                if result:
+                    dic['organism'], dic['UniProt'] = result.groups()
             elif 'SwissProt' in dic['organism']:
                 result = re.search('(.*?)(\S+) SwissProt', dic['organism'])
-                if result: dic['organism'], dic['SwissProt'] = result.groups()
+                if result:
+                    dic['organism'], dic['SwissProt'] = result.groups()
             dic['organism'] = dic['organism'].strip()
             if ',' in dic['RF']:
                 dic['RF'] = dic['RF'].split(',')
@@ -136,28 +137,30 @@ class BRENDAParser:
     def handleID(self, elem):
         str = elem['ID']
         if '(' in str:
-            elem['ID'] = re.search('(\d+\.\d+\.\d+\.\d+)', str).groups()[0]
-            elem['ID'] = {}
-            elem['ID']['id'] = re.findall('(\d+\.\d+\.\d+\.\d+)', str)
-            elem['ID']['des'] = str
+            elem['ID'] = re.search('(\d+\.\d+\.\d+\.\d+)', str).group()
+            elem['ID'] = {'id': re.findall('(\d+\.\d+\.\d+\.\d+)', str), 'des': str}
         return elem
 
     def check_dic(self, dic):
         for key in list(dic.keys()):
-            if dic[key] == '': del dic[key]
+            if dic[key] == '':
+                del dic[key]
         return dic
 
     def re_match(self, str):
         PR = RF = des = ''
         if '#' == str[0] and '>' == str[-1]:
             result = re.search('#(.*?)#(.*)<(.*?)>', str)
-            if result: PR, des, RF = result.groups()
+            if result:
+                PR, des, RF = result.groups()
         elif '#' == str[0] and '>' != str[-1]:
             PR, des = re.search('#(.*?)#(.*?)', str).groups()
         elif '#' != str[0]:
             des = str
-        if ',' in PR: PR = PR.split(',')
-        if ',' in RF: RF = RF.split(',')
+        if ',' in PR:
+            PR = PR.split(',')
+        if ',' in RF:
+            RF = RF.split(',')
         des = des.strip()
         return PR, des, RF
 
@@ -166,7 +169,8 @@ class BRENDAParser:
             try:
                 for key in list(elem.keys()):
                     if key in ['ID', 'RN', 'SN']:
-                        if key == 'ID': elem = self.handleID(elem)
+                        if key == 'ID':
+                            elem = self.handleID(elem)
                     elif key in ['PR']:
                         elem = self.handlePR(elem)
                     elif key in ['NSP', 'SP']:
@@ -175,24 +179,23 @@ class BRENDAParser:
                         self.handleTN(elem, key=key, infokey='inhibitor')
                     else:
                         elem = self.handleTN(elem, key=key)
-            except:
-                print('wrong when it comes to ', elem['ID'], key)
+            except Exception as e:
+                print('Error processing element:', elem.get('ID', 'Unknown'), key, str(e))
                 sys.exit()
             yield elem
+
     def parse(self):
         config = configparser.ConfigParser()
-        cfgfile = '../conf/drugkb.config'
+        cfgfile = '../conf/drugkb_test.config'
         config.read(cfgfile)
-        fin_txt = os.path.join(config.get('brenda', 'data_path_1').replace('.tar.gz', ''))
-        fout_json = os.path.join(config.get('brenda', 'json_path_1'))
+        fin_txt = config.get('brenda', 'data_path_1').replace('.tar.gz', '')
         dics = [x for x in self.doParse(fin_txt)]
-        get_dict = { }
-        for i in range(len(dics)):
-            get_dict[i] = dics[i]
-        with open(fout_json, 'w') as json_f:
-            json.dump(get_dict, json_f, indent=4)
+        return dics  # 直接返回解析得到的字典列表
 
 
 if __name__ == '__main__':
     d = BRENDAParser()
-    d.parse()
+    parsed_data = d.parse()  # This now returns a generator of dictionaries
+    for data in parsed_data:
+        print(data)  # Print the first dictionary
+        break  # Exit after the first iteration

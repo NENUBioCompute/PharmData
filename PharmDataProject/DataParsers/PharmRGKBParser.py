@@ -5,29 +5,26 @@
 @desc    : pharmGKB parse
 '''
 import configparser
-import json
 import os
 import pandas as pd
-import sys
-
 
 
 class PharmGKBParser:
-
-    def __parse(self,config):
+    def __parse(self, config):
         section = 'pharmgkb'
         tables = config.get(section, 'tables')[1:-1].split(',')
+        parsed_data = {}
         for idx in range(int(config.get(section, 'col_num'))):
             if idx == 3:
                 fin_csv = config.get(section, 'data_path_%d' % (idx + 1)).replace('.zip', '')
             else:
                 fin_csv = os.path.join(config.get(section, 'data_path_%d' % (idx + 1)).replace('.zip', ''),
                                        '%s.tsv' % tables[idx])
-            fout_json = os.path.join(config.get(section, 'json_path_%d' % (idx + 1)), '%s.json' % tables[idx])
+            data = self.__csv2dict(fin_csv, sep='\t')
+            parsed_data[tables[idx]] = data
+        return parsed_data
 
-            self.__csv2json(fin_csv, fout_json, sep='\t')
-
-    def replace_nan_with_empty(self,data):
+    def replace_nan_with_empty(self, data):
         for key, value in data.items():
             if isinstance(value, dict):
                 self.replace_nan_with_empty(value)  # 递归处理嵌套的字典
@@ -37,16 +34,13 @@ class PharmGKBParser:
                         self.replace_nan_with_empty(item)  # 递归处理嵌套的字典
             elif pd.isna(value):  # 检查是否为 NaN
                 data[key] = ''  # 将 NaN 替换为空值
-    def __csv2json(self,fin_csv, fout_json, sep='\t'):
+
+    def __csv2dict(self, fin_csv, sep='\t'):
         '''
-        1.stroe csv file to mongodb
-        2.replace ' ' to '_',replace '. to '__'
-        3.create index
-        :param fin_csv:
-        :param firstname: db name in mongodb
-        :param secondname: table name in mongodb
-        :param sep: \t, , and so on
-        :return:
+        Parse CSV/TSV file to dictionary
+        :param fin_csv: Input file path
+        :param sep: Separator
+        :return: Parsed dictionary
         '''
         if '.tsv' in fin_csv:
             t = self.__parseCsv(fin_csv, sep=sep)
@@ -58,12 +52,9 @@ class PharmGKBParser:
             # 将 NaN 替换为空字符串
             for i in t:
                 self.replace_nan_with_empty(i)
+        return t
 
-
-        with open(fout_json, 'w') as json_f:
-            json.dump(t, json_f, indent=4)
-
-    def __parseCsv(self,fin_csv, sep='\t'):
+    def __parseCsv(self, fin_csv, sep='\t'):
         df = pd.read_csv(fin_csv, sep=sep)
         titles = []
         for head in df.columns:
@@ -72,7 +63,7 @@ class PharmGKBParser:
         dicts = df.T.to_dict()
         return dicts
 
-    def __result(self,dic):
+    def __result(self, dic):
         '''
         :param iter: csv parsed into one dict
         :return: list of the dict value
@@ -80,7 +71,7 @@ class PharmGKBParser:
         for v in dic.values():
             yield v
 
-    def __parsePathway(self,dirin, sep='\t'):
+    def __parsePathway(self, dirin, sep='\t'):
         dics = []
         for eachfile in os.listdir(dirin):
             if 'PA' not in eachfile: continue
@@ -98,11 +89,28 @@ class PharmGKBParser:
                 dic['content'].append(x)
             dics.append(dic)
         return dics
+
     def start(self, config):
-        self.__parse(config)
+        return self.__parse(config)
+
 
 if __name__ == '__main__':
     pharmGKBParser = PharmGKBParser()
     config = configparser.ConfigParser()
-    config.read('../conf/drugkb.config')
-    pharmGKBParser.start(config)
+    config.read('../conf/drugkb_test.config')
+    parsed_data = pharmGKBParser.start(config)
+
+    # 测试每个文件的第一个字典数据
+    for table, data in parsed_data.items():
+        if isinstance(data, dict):
+            first_item = next(iter(data.values()))
+        elif isinstance(data, list):
+            first_item = data[0]
+        else:
+            first_item = None
+
+        print(f"Table: {table}, First item: {first_item}")
+
+        # 注释掉下面的 break 语句以解析每个文件夹中的所有字典
+        # break
+

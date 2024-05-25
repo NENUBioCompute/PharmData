@@ -42,6 +42,6 @@ class SMPDBDownloader:
 
 
 if __name__ == "__main__":
-    cfg = "/home/zhaojingtong/tmpcode/PharmData/PharmDataProject/conf/drugkb.config"
+    cfg = r"D:\PharmData\PharmDataProject\conf\drugkb_test.config"
     config = ConfigParser.get_config(cfg)
     SMPDBDownloader(config).start()

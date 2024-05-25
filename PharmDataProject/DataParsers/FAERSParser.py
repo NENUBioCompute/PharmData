@@ -19,7 +19,7 @@ import os
 class FAERSParser:
     def __init__(self):
         self.config = configparser.ConfigParser()
-        self.config.read('../conf/drugkb.config')
+        self.config.read('../conf/drugkb_test.config')
         self.save_path = self.config.get('faers', 'data_path_1')
 
     def get_zip_file_path(self):
