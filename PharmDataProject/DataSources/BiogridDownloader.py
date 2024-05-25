@@ -7,12 +7,16 @@ from zipfile import ZipFile
 from PharmDataProject.Utilities.FileDealers.FileSystem import folder_is_exists
 from PharmDataProject.Utilities.NetDownloads.HttpDownloader import HTTP
 from tqdm import tqdm
-
+import configparser
 class BiogridDownload:
 
     def __init__(self):
         self.curState = 0
         self.pid = None
+        self.config = configparser.ConfigParser()
+        self.config.read('../conf/drugkb_test.config')
+        self.source_url = self.config.get('biogrid','source_url_1')
+        self.save_path = self.config.get('biogrid', 'data_path_1')
 
     def checkStatus(self):
         '''
@@ -71,7 +75,7 @@ class BiogridDownload:
                     zip_ref.extract(file, extractPath)
                     t.update(1)
 
-    def start(self, logPath, sourceUrl, folderPath, fileName):
+    def start(self):
         """
         Data source "do" download
         @param logPath: log file path
@@ -83,19 +87,19 @@ class BiogridDownload:
         # Log information
         logger = logging.getLogger('BiogridDownloader')
         logger.setLevel(logging.INFO)
-        fh = logging.FileHandler(logPath)
+        fh = logging.FileHandler('./text.log')
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         fh.setFormatter(formatter)
         logger.addHandler(fh)
 
         try:
             self.curState = 2
-            folder_is_exists.__func__(folderPath)
+            folder_is_exists.__func__(self.save_path)
             self.pid = os.getpid()  # Set the current process ID
             logger.info('Downloading')
-            localPath = self.download_with_progress(sourceUrl, folderPath, fileName)
+            localPath = self.download_with_progress(self.source_url, self.save_path, 'biogrid_data.zip')
             logger.info('Download completed. Extracting...')
-            self.extract_with_progress(localPath, folderPath)
+            self.extract_with_progress(localPath, self.save_path)
 
         except urllib.error.URLError:
             self.curState = 4
@@ -119,13 +123,12 @@ class BiogridDownload:
 
         else:
             self.curState = 3
-            logger.info(f'{fileName} Success')
+
 
         finally:
             pass
-        return folderPath
+    pass
 
 
 if __name__ == "__main__":
-    BiogridDownload().start('./test.log',
-                            'https://downloads.thebiogrid.org/Download/BioGRID/Release-Archive/BIOGRID-4.4.224/BIOGRID-ALL-4.4.224.mitab.zip', '../../data/biogrid/', 'biogrid_data.zip')
+    BiogridDownload().start()
