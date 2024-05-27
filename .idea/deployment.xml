@@ -33,7 +33,7 @@
       <paths name="root@59.73.198.168:22 password">
         <serverdata>
           <mappings>
-            <mapping deploy="/home/zhaojingtong/pharmrg/pharmrg_code/main" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/home/zhaojingtong/pharmrg/pharmrg_code/main" local="$PROJECT_DIR$" web="" />
           </mappings>
         </serverdata>
       </paths>

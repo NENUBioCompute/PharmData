@@ -6,7 +6,9 @@ from tqdm import tqdm
 
 class DGDBDownloader:
     def __init__(self):
-        pass
+        self.config = configparser.ConfigParser()
+        self.cfgfile = '../conf/drugkb_test.config'
+        self.config.read(self.cfgfile)
 
     def mkdir(self, path):
         # 检查路径是否存在，如果不存在则创建
@@ -30,16 +32,15 @@ class DGDBDownloader:
                             f.write(chunk)
                             bar.update(len(chunk))
         print("\n下载完成！")
+    def download(self):
+        self.download_to_data(self.config.get('dgidb', 'source_url_1'), self.config.get('dgidb', 'data_path_1'))
+        self.download_to_data(self.config.get('dgidb', 'source_url_2'), self.config.get('dgidb', 'data_path_2'))
+        self.download_to_data(self.config.get('dgidb', 'source_url_3'), self.config.get('dgidb', 'data_path_3'))
+        self.download_to_data(self.config.get('dgidb', 'source_url_4'), self.config.get('dgidb', 'data_path_4'))
 
 if __name__ == '__main__':
-    config = configparser.ConfigParser()
-    cfgfile = '../conf/drugkb_test.config'
-    config.read(cfgfile)
+
 
     downloader = DGDBDownloader()  # 实例化DGDBDownloader类
 
-    # 通过实例调用方法下载所有文件
-    downloader.download_to_data(config.get('dgidb', 'source_url_1'), config.get('dgidb', 'data_path_1'))
-    downloader.download_to_data(config.get('dgidb', 'source_url_2'), config.get('dgidb', 'data_path_2'))
-    downloader.download_to_data(config.get('dgidb', 'source_url_3'), config.get('dgidb', 'data_path_3'))
-    downloader.download_to_data(config.get('dgidb', 'source_url_4'), config.get('dgidb', 'data_path_4'))
+    downloader.download()
