@@ -7,7 +7,7 @@ class PharmRGKBDownloader:
     def __init__(self):
         self.config = configparser.ConfigParser()
         self.cfgfile = '../conf/drugkb_test.config'
-        config.read(self.cfgfile)
+        self.config.read(self.cfgfile)
 
     def download(self, url, dir):
         # 创建目录（如果不存在）
@@ -39,8 +39,8 @@ class PharmRGKBDownloader:
         downloader.un_gz(dir)  # 通过实例调用un_gz方法
     def download_all(self):
         for idx in range(1, int(self.config.get('pharmgkb', 'col_num')) + 1):
-            source_url = config.get('pharmgkb', 'source_url_%d' % idx)
-            data_path = config.get('pharmgkb', 'data_path_%d' % idx)
+            source_url = self.config.get('pharmgkb', 'source_url_%d' % idx)
+            data_path = self.config.get('pharmgkb', 'data_path_%d' % idx)
             self.main(source_url, data_path)
 
 if __name__ == '__main__':
