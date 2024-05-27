@@ -4,7 +4,6 @@ from tqdm import tqdm
 from PharmDataProject.DataParsers.BindingdbParser import BindingDbParser
 from PharmDataProject.Utilities.Database.dbutils import DBconnection
 
-
 class BindingdbToMongo:
     def __init__(self, config_path):
         self.config = configparser.ConfigParser()
@@ -44,6 +43,3 @@ if __name__ == '__main__':
         bindingdb_to_mongo.db.collection.insert_one(row)
         print(f"Inserted first document: {row}")
         break
-
-    # Uncomment the following line for full insertion with progress bar
-    # bindingdb_to_mongo.save_mongodb()
