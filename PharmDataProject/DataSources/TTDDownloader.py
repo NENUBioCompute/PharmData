@@ -96,7 +96,7 @@ class TTdDownloader:
             try:
                 self.curState = 2
                 logger.info(f'Starting download: {fileName} from {sourceDir}')
-                self.pid = HTTP.download(sourceDir, folderPath + '/', fileName)  # Download
+                self.pid = HTTP.DownLoad(sourceDir, folderPath + '/', fileName)  # Download
                 logger.info('Downloading')
 
                 with tqdm(total=100, desc=fileName, unit='B', unit_scale=True, unit_divisor=1024) as pbar:
