@@ -11,9 +11,10 @@ from tqdm import tqdm
 import requests
 
 class UniprotDownloader:
-    def __init__(self, config_path):
+    def __init__(self):
+        self.cfgfile = '../conf/drugkb_test.config'
         self.config = configparser.ConfigParser()
-        self.config.read(config_path)
+        self.config.read(self.cfgfile)
 
     def download_with_progress(self, url, output_path):
         response = requests.get(url, stream=True)
@@ -53,6 +54,5 @@ class UniprotDownloader:
         self.get_uniprot_data(down_url, save_path)
 
 if __name__ == "__main__":
-    cfgfile = '../conf/drugkb_test.config'
-    downloader = UniprotDownloader(cfgfile)
+    downloader = UniprotDownloader()
     downloader.download_from_config()
