@@ -4,9 +4,10 @@ import configparser
 import os
 
 class BindingDbParser:
-    def __init__(self, config_path=r"D:\PharmData\PharmDataProject\conf\drugkb_test.config"):
+    def __init__(self):
+        self.cfgfile = "../conf/drugkb_test.config"
         self.config = configparser.ConfigParser()
-        self.config.read(config_path)
+        self.config.read(self.cfgfile)
         self.target_fields = [
             'bindingdb Target Chain  Sequence',
             'PDB ID(s) of Target Chain',
@@ -22,15 +23,23 @@ class BindingDbParser:
             'UniProt (TrEMBL) Alternative ID(s) of Target Chain',
         ]
         self.chains_key = 'Number of Protein Chains in Target (>1 implies a multichain complex)'
+        self.path = self.config.get('bindingdb', 'data_path_1')
+        files = os.listdir(self.path)
 
-    def parse_bindingdb(self, path):
+        # Filter out TSV files
+        tsv_files = [file for file in files if file.endswith('.tsv')][0]
+        self.tsv_path = self.path+tsv_files
+
+
+    def parse_bindingdb(self):
         """
         Parse the BindingDB file.
 
         :param path: Path to the BindingDB TSV file.
         """
         csv.register_dialect('mydialect', delimiter='\t', quoting=csv.QUOTE_ALL)
-        with open(path, 'r', encoding='utf-8') as csvfile:
+
+        with open(self.tsv_path, 'r', encoding='utf-8') as csvfile:
             reader = csv.reader(csvfile, dialect='mydialect')
             header = next(reader)
             chains_index = header.index(self.chains_key)
@@ -48,24 +57,3 @@ class BindingDbParser:
                     chains.append(chain)
                 rowdict['chains'] = chains
                 yield rowdict
-
-if __name__ == "__main__":
-    # 配置文件路径
-    config_path = r"D:\PharmData\PharmDataProject\conf\drugkb_test.config"
-    
-    # 创建解析器对象
-    parser = BindingDbParser(config_path)
-    
-    # 获取解析文件的路径
-    tsv_path = parser.config.get('bindingdb', 'data_path_1')
-    print(tsv_path)
-    
-    # 确保路径是绝对路径
-    tsv_path = os.path.abspath(os.path.join(os.path.dirname(config_path), tsv_path))
-    
-    print(f"Parsing TSV file from: {tsv_path}")
-    
-    # 解析并输出第一个数据
-    for row in parser.parse_bindingdb(tsv_path):
-        print(row)
-        break
