@@ -9,9 +9,10 @@ import os
 import requests
 
 class DoDownloader:
-    def __init__(self, config_path):
+    def __init__(self):
+        self.cfgfile = '../conf/drugkb_test.config'
         self.config = configparser.ConfigParser()
-        self.config.read(config_path)
+        self.config.read(self.cfgfile)
 
     def get_do_data(self, url, path):
         response = requests.get(url, stream=True)
@@ -29,6 +30,6 @@ class DoDownloader:
                          self.config.get('do', 'data_path_1'))
 
 if __name__ == "__main__":
-    cfgfile = '../conf/drugkb_test.config'
-    downloader = DoDownloader(cfgfile)
+
+    downloader = DoDownloader()
     downloader.download_from_config()
