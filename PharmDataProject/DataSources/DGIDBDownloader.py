@@ -39,8 +39,6 @@ class DGDBDownloader:
         self.download_to_data(self.config.get('dgidb', 'source_url_4'), self.config.get('dgidb', 'data_path_4'))
 
 if __name__ == '__main__':
-
-
     downloader = DGDBDownloader()  # 实例化DGDBDownloader类
 
     downloader.download()
