@@ -11,19 +11,17 @@ import threading
 from PharmDataProject.Utilities.FileDealers.ConfigParser import ConfigParser
 from PharmDataProject.Utilities.NetDownloads.HttpDownloader import HTTP
 
-"""
-Download Page: https://smpdb.ca/downloads
-"""
 
 
 class SMPDBDownloader:
-    def __init__(self, config):
-        self.config = config
-        self.data_path = config.get("smpdb", "data_path")
+    def __init__(self):
+        self.cfg = r"../conf/drugkb_test.config"
+        self.config = ConfigParser.get_config(self.cfg)
+        self.data_path = self.config.get("smpdb", "data_path")
 
     def __download_and_unzip(self, url):
         filename = url.split("/")[-1]
-        HTTP.get_data(url, self.data_path, filename)
+        HTTP.GetData(url, self.data_path, filename)
         subprocess.run(
             args=["unzip", "-q", "-n", self.data_path + filename, "-d", self.data_path + filename.split(".")[0]],
             check=True, bufsize=4096)
@@ -42,6 +40,5 @@ class SMPDBDownloader:
 
 
 if __name__ == "__main__":
-    cfg = r"D:\PharmData\PharmDataProject\conf\drugkb_test.config"
-    config = ConfigParser.get_config(cfg)
-    SMPDBDownloader(config).start()
+    SMPDBDownloader = SMPDBDownloader()
+    SMPDBDownloader.start()
