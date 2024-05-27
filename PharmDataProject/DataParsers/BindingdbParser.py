@@ -1,53 +1,71 @@
-# -*- coding: utf-8 -*-
-# @Author : gaoqingshan
-# @Time   : 2023/10/8 17:33
-# @Email  : 519546702@qq.com
-# @function: This class downloads TSV files from the bindingdb database
-
+import csv
+import collections
 import configparser
-import argparse
-import io
-import zipfile
-import requests
-import logging
-from tqdm import tqdm
+import os
 
-class BindingdbDownloader:
-    def __init__(self):
-        self.cfgfile = "../conf/drugkb_test.config"
+class BindingDbParser:
+    def __init__(self, config_path=r"D:\PharmData\PharmDataProject\conf\drugkb_test.config"):
         self.config = configparser.ConfigParser()
-        self.config.read(self.cfgfile)
+        self.config.read(config_path)
+        self.target_fields = [
+            'bindingdb Target Chain  Sequence',
+            'PDB ID(s) of Target Chain',
+            'UniProt (SwissProt) Recommended Name of Target Chain',
+            'UniProt (SwissProt) Entry Name of Target Chain',
+            'UniProt (SwissProt) Primary ID of Target Chain',
+            'UniProt (SwissProt) Secondary ID(s) of Target Chain',
+            'UniProt (SwissProt) Alternative ID(s) of Target Chain',
+            'UniProt (TrEMBL) Submitted Name of Target Chain',
+            'UniProt (TrEMBL) Entry Name of Target Chain',
+            'UniProt (TrEMBL) Primary ID of Target Chain',
+            'UniProt (TrEMBL) Secondary ID(s) of Target Chain',
+            'UniProt (TrEMBL) Alternative ID(s) of Target Chain',
+        ]
+        self.chains_key = 'Number of Protein Chains in Target (>1 implies a multichain complex)'
 
-    def download_with_progress(self, url, dest_path):
-        try:
-            # Send the request and get the data
-            response = requests.get(url, stream=True)
-            response.raise_for_status()
-        except requests.exceptions.RequestException as e:
-            logging.error("Request failed: %s", e)
-            return
+    def parse_bindingdb(self, path):
+        """
+        Parse the BindingDB file.
 
-        total_size = int(response.headers.get('content-length', 0))
-        block_size = 1024  # 1 Kibibyte
-        t = tqdm(total=total_size, unit='iB', unit_scale=True)
+        :param path: Path to the BindingDB TSV file.
+        """
+        csv.register_dialect('mydialect', delimiter='\t', quoting=csv.QUOTE_ALL)
+        with open(path, 'r', encoding='utf-8') as csvfile:
+            reader = csv.reader(csvfile, dialect='mydialect')
+            header = next(reader)
+            chains_index = header.index(self.chains_key)
+            target0_index = chains_index + 1
+            ligand_fields = header[:chains_index + 1]
+            for row in reader:
+                ligand_values = row[:chains_index + 1]
+                rowdict = collections.OrderedDict(zip(ligand_fields, ligand_values))
+                chains = []
+                for i in range(int(rowdict[self.chains_key])):
+                    i_0 = target0_index + i * len(self.target_fields)
+                    i_1 = target0_index + (i + 1) * len(self.target_fields)
+                    target_values = row[i_0:i_1]
+                    chain = collections.OrderedDict(zip(self.target_fields, target_values))
+                    chains.append(chain)
+                rowdict['chains'] = chains
+                yield rowdict
 
-        with io.BytesIO() as file_stream:
-            for data in response.iter_content(block_size):
-                t.update(len(data))
-                file_stream.write(data)
-            t.close()
-
-            file_stream.seek(0)
-            with zipfile.ZipFile(file_stream) as zip_ref:
-                zip_ref.extractall(dest_path)
-            logging.info("The TSV file is saved")
-
-    def download_from_config(self):
-        url = self.config.get('bindingdb', 'source_url_1')
-        dest_path = self.config.get('bindingdb', 'data_path_1')
-        self.download_with_progress(url, dest_path)
-
-if __name__ == '__main__':
-
-    downloader = BindingdbDownloader()
-    downloader.download_from_config()
+if __name__ == "__main__":
+    # 配置文件路径
+    config_path = r"D:\PharmData\PharmDataProject\conf\drugkb_test.config"
+    
+    # 创建解析器对象
+    parser = BindingDbParser(config_path)
+    
+    # 获取解析文件的路径
+    tsv_path = parser.config.get('bindingdb', 'data_path_1')
+    print(tsv_path)
+    
+    # 确保路径是绝对路径
+    tsv_path = os.path.abspath(os.path.join(os.path.dirname(config_path), tsv_path))
+    
+    print(f"Parsing TSV file from: {tsv_path}")
+    
+    # 解析并输出第一个数据
+    for row in parser.parse_bindingdb(tsv_path):
+        print(row)
+        break

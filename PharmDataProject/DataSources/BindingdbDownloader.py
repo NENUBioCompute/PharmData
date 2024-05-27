@@ -13,9 +13,10 @@ import logging
 from tqdm import tqdm
 
 class BindingdbDownloader:
-    def __init__(self, config_path):
+    def __init__(self):
+        self.cfgfile = "../conf/drugkb_test.config"
         self.config = configparser.ConfigParser()
-        self.config.read(config_path)
+        self.config.read(self.cfgfile)
 
     def download_with_progress(self, url, dest_path):
         try:
@@ -47,6 +48,6 @@ class BindingdbDownloader:
         self.download_with_progress(url, dest_path)
 
 if __name__ == '__main__':
-    cfgfile ="../conf/drugkb_test.config"
-    downloader = BindingdbDownloader(cfgfile)
+
+    downloader = BindingdbDownloader()
     downloader.download_from_config()
