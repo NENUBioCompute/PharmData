@@ -32,10 +32,13 @@ class HTTP:
 
 
 class Wikipathway_Downloader:
+    def __init__(self):
+        self.cfgfile = '../conf/drugkb_test.config'
 
-    def start(self, cfgfile):
+    def start(self):
+
         config = configparser.ConfigParser()
-        config.read(cfgfile, encoding="utf-8")
+        config.read(self.cfgfile, encoding="utf-8")
         url = config.get('wikipathway', 'source_url_1')
         data_path = config.get('wikipathway', 'data_path_1')
         filename = os.path.basename(url)
@@ -62,4 +65,5 @@ class Wikipathway_Downloader:
 
 
 if __name__ == '__main__':
-    Wikipathway_Downloader().start('../conf/drugkb_test.config')
+    wikipathwaydownloader = Wikipathway_Downloader()
+    wikipathwaydownloader.start()
