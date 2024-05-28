@@ -21,6 +21,7 @@ class PharmRGKBParser:
     def __parse(self):
         parsed_data = {}
         for idx, data_path in enumerate(self.data_paths):
+            print(data_path)
             if idx == 3:
                 data = self.__parsePathway(data_path, sep='\t')
             else:
