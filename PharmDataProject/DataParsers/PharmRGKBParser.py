@@ -4,24 +4,28 @@
 @Time    : 2022/7/25 21:36
 @desc    : pharmGKB parse
 '''
+
 import configparser
 import os
 import pandas as pd
 
+class PharmRGKBParser:
+    def __init__(self, config_path='../conf/drugkb_test.config'):
+        self.config_path = config_path
+        self.config = configparser.ConfigParser()
+        self.config.read(config_path)
+        self.section = 'pharmgkb'
+        self.tables = self.config.get(self.section, 'tables')[1:-1].split(',')
+        self.data_paths = [self.config.get(self.section, f'data_path_{i + 1}') for i in range(int(self.config.get(self.section, 'col_num')))]
 
-class PharmGKBParser:
-    def __parse(self, config):
-        section = 'pharmgkb'
-        tables = config.get(section, 'tables')[1:-1].split(',')
+    def __parse(self):
         parsed_data = {}
-        for idx in range(int(config.get(section, 'col_num'))):
+        for idx, data_path in enumerate(self.data_paths):
             if idx == 3:
-                fin_csv = config.get(section, 'data_path_%d' % (idx + 1)).replace('.zip', '')
+                data = self.__parsePathway(data_path, sep='\t')
             else:
-                fin_csv = os.path.join(config.get(section, 'data_path_%d' % (idx + 1)).replace('.zip', ''),
-                                       '%s.tsv' % tables[idx])
-            data = self.__csv2dict(fin_csv, sep='\t')
-            parsed_data[tables[idx]] = data
+                data = self.__parseFilesInDirectory(data_path, sep='\t')
+            parsed_data[self.tables[idx]] = data
         return parsed_data
 
     def replace_nan_with_empty(self, data):
@@ -42,30 +46,18 @@ class PharmGKBParser:
         :param sep: Separator
         :return: Parsed dictionary
         '''
-        if '.tsv' in fin_csv:
-            t = self.__parseCsv(fin_csv, sep=sep)
-            # 将 NaN 替换为空字符串
-            for key, value in t.items():
-                t[key] = {k: v if pd.notna(v) else '' for k, v in value.items()}
-        else:
-            t = self.__parsePathway(fin_csv, sep=sep)
-            # 将 NaN 替换为空字符串
-            for i in t:
-                self.replace_nan_with_empty(i)
-        return t
-
-    def __parseCsv(self, fin_csv, sep='\t'):
         df = pd.read_csv(fin_csv, sep=sep)
-        titles = []
-        for head in df.columns:
-            titles.append(head.replace(' ', '-').replace('.', '--'))
+        titles = [head.replace(' ', '-').replace('.', '--') for head in df.columns]
         df.columns = titles
         dicts = df.T.to_dict()
+        # 将 NaN 替换为空字符串
+        for key, value in dicts.items():
+            dicts[key] = {k: v if pd.notna(v) else '' for k, v in value.items()}
         return dicts
 
     def __result(self, dic):
         '''
-        :param iter: csv parsed into one dict
+        :param dic: csv parsed into one dict
         :return: list of the dict value
         '''
         for v in dic.values():
@@ -74,12 +66,13 @@ class PharmGKBParser:
     def __parsePathway(self, dirin, sep='\t'):
         dics = []
         for eachfile in os.listdir(dirin):
-            if 'PA' not in eachfile: continue
+            if 'PA' not in eachfile:
+                continue
             fin_csv = os.path.join(dirin, eachfile)
             df = pd.read_csv(fin_csv, sep=sep)
             t = df.T.to_dict()
             dic = {}
-            dic['pathway_id'], dic['name'] = eachfile.split('-')
+            dic['pathway_id'], dic['name'] = eachfile.split('-')[:2]
             dic['name'] = dic['name'].split('.')[0].replace('_', ' ')
             dic['content'] = []
             for x in self.__result(t):
@@ -90,27 +83,30 @@ class PharmGKBParser:
             dics.append(dic)
         return dics
 
-    def start(self, config):
-        return self.__parse(config)
+    def __parseFilesInDirectory(self, dirin, sep='\t'):
+        all_data = []
+        for eachfile in os.listdir(dirin):
+            if eachfile.endswith('.tsv'):
+                fin_csv = os.path.join(dirin, eachfile)
+                data = self.__csv2dict(fin_csv, sep)
+                all_data.extend(data.values())
+        return all_data
+
+    def start(self):
+        return self.__parse()
 
 
 if __name__ == '__main__':
-    pharmGKBParser = PharmGKBParser()
-    config = configparser.ConfigParser()
-    config.read('../conf/drugkb_test.config')
-    parsed_data = pharmGKBParser.start(config)
+    pharmGKBParser = PharmRGKBParser()
+    parsed_data = pharmGKBParser.start()
 
     # 测试每个文件的第一个字典数据
     for table, data in parsed_data.items():
-        if isinstance(data, dict):
-            first_item = next(iter(data.values()))
-        elif isinstance(data, list):
+        if isinstance(data, list) and data:
             first_item = data[0]
+        elif isinstance(data, dict):
+            first_item = next(iter(data.values()))
         else:
             first_item = None
 
         print(f"Table: {table}, First item: {first_item}")
-
-        # 注释掉下面的 break 语句以解析每个文件夹中的所有字典
-        # break
-
