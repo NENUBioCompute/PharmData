@@ -1,49 +1,42 @@
-# Title     : to_mongo.py
-# Created by: julse@qq.com
-# Created on: 2021/6/23 14:00
 import configparser
-import json
 import time
-import os
 from PharmDataProject.Utilities.Database.dbutils import DBconnection
-
+from PharmDataProject.DataParsers.TTDParser import TtdParser
 
 class TTDtoMongo:
-    def __init__(self):
-        pass
+    def __init__(self, config_path='../conf/drugkb_test.config'):
+        self.config_path = config_path
+        self.config = configparser.ConfigParser()
+        self.config.read(config_path)
+        self.section = 'ttd'
+        self.db_name = self.config.get(self.section, 'db_name')
+        self.tables = self.config.get(self.section, 'tables')[1:-1].split(',')
+        self.data_paths = [self.config.get(self.section, f'data_path_{i + 1}') for i in range(int(self.config.get(self.section, 'data_path_num')))]
+        self.col_names = [self.config.get(self.section, f'col_name_{i + 1}') for i in range(int(self.config.get(self.section, 'col_num')))]
 
-    def result(self, dic):
-        '''
-        :param iter: csv parsed into one dict
-        :return: list of the dict value
-        '''
-        if isinstance(dic,list):
-            for v in dic:
-                yield v
-        else:
-            for v in dic.values():
-                yield v
-    def saveto_mongo(self, fin_json,db):
-        dics = self.result(json.load(open(fin_json,'r')))
-        for dic in dics:
-            db.collection.insert_one(dic)
-        # if indexs != None: do.createIndex(indexs)
-    def to_mongo(self, cfgfile = '../conf/drugkb.config'):
-        config = configparser.ConfigParser()
-        config.read(cfgfile)
-        section = 'ttd'
-        for idx in range(0,int(config.get(section, 'col_num'))):
-            db = DBconnection(cfgfile, config.get(section, 'db_name'),
-                              config.get(section, 'col_name_' + str(idx + 1)))
-            table_name = config.get(section, 'col_name_%d'%(idx + 1))
-            fin_json = os.path.join(config.get(section, 'json_path_%d' % (idx + 1)))
-            print('strore',idx,table_name,fin_json)
-            self.saveto_mongo(fin_json, db)
+    def save_to_mongo(self, collection_name, data):
+        db = DBconnection(self.config_path, self.db_name, collection_name)
+        db.collection.insert_one(data)
+        db.collection.database.client.close()
+
+    def parse_and_insert_all_entries(self, table_name, data_path, col_name):
+        parser = TtdParser(config_path=self.config_path)
+        for parsed_data in parser.parse(table_name):
+            self.save_to_mongo(col_name, parsed_data)
+            print(f"存入集合 {col_name}: {parsed_data}")
+
+    def run(self):
+        for idx, table_name in enumerate(self.tables):
+            data_path = self.data_paths[idx]
+            col_name = self.col_names[idx]
+            print(f"正在解析文件: {data_path}")
+            self.parse_and_insert_all_entries(table_name, data_path, col_name)
+
+
 if __name__ == '__main__':
     print('start', time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
     start = time.time()
-    TTDtoMongo = TTDtoMongo
-    TTDtoMongo.to_mongo()
+    ttd_to_mongo = TTDtoMongo()
+    ttd_to_mongo.run()  # 正常入库方法，插入所有条目
     print('stop', time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
     print('time', time.time() - start)
-

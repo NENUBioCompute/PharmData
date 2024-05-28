@@ -1,11 +1,13 @@
 import os
 import configparser
 
+
 class DGIDBParser:
     def __init__(self, config_path='../conf/drugkb_test.config'):
         self.config = configparser.ConfigParser()
         self.config.read(config_path)
-        self.data_paths = [self.config.get('dgidb', f'data_path_{i + 1}') for i in range(int(self.config.get('dgidb', 'data_path_num')))]
+        self.data_paths = [self.config.get('dgidb', f'data_path_{i + 1}') for i in
+                           range(int(self.config.get('dgidb', 'data_path_num')))]
 
     def parse(self, data_path):
         file_list = os.listdir(data_path)

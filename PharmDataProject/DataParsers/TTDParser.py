@@ -1,4 +1,3 @@
-
 # Title     : parse.py
 # Created by: julse@qq.com
 # Created on: 2021/6/23 14:00
@@ -10,141 +9,163 @@ import json
 import sys
 import pandas as pd
 
-KEYS = {}
-def handleKey(fo, line):
-    dic = {}
-    IDField = ''
-    while (line):
-        line = fo.readline()
-        if '\t' in line:
-            elem = line[:-1].split('\t')
-            key = elem[0]
-            if IDField == '':
-                IDField = key
-            dic[key] = {}
-            otherkeys = []
-            for idx, el in enumerate(elem):
-                if idx == 0:
+
+class TtdParser:
+    def __init__(self, config_path='../conf/drugkb_test.config'):
+        self.config = configparser.ConfigParser()
+        self.config.read(config_path)
+        self.section = 'ttd'
+        self.tables = self.config.get(self.section, 'tables')[1:-1].split(',')
+        self.data_paths = [self.config.get(self.section, f'data_path_{i + 1}') for i in
+                           range(int(self.config.get(self.section, 'col_num')))]
+        self.KEYS = {}
+
+    def handleKey(self, fo, line):
+        dic = {}
+        IDField = ''
+        while (line):
+            line = fo.readline()
+            if '\t' in line:
+                elem = line[:-1].split('\t')
+                key = elem[0]
+                if IDField == '':
+                    IDField = key
+                dic[key] = {}
+                otherkeys = []
+                for idx, el in enumerate(elem):
+                    if idx == 0:
+                        continue
+                    elif idx == 1:
+                        dic[key]['des'] = elem[idx]
+                    else:
+                        if elem[idx] != '':
+                            otherkeys.append(elem[idx])
+                self.KEYS[key] = otherkeys
+            if '----------------------' in line or '____________' in line: break
+        return fo, dic, IDField
+
+    def ttdTxt2Dict(self, fin):
+        '''
+        :param fin:
+        :return: dict
+        '''
+        with open(fin, 'r', encoding='utf-8') as fo:
+            current_section = ''
+            seq = ''
+            line = fo.readline()
+            commentline = 0
+            dic = {}
+            secElem = {}
+            IDField = ''
+            while (line):
+                line = fo.readline()
+                if '\n' == line: continue
+                if '----------------------' in line or '____________' in line:
+                    commentline += 1
                     continue
-                elif idx == 1:
-                    dic[key]['des'] = elem[idx]
-                else:
-                    if elem[idx] != '':
-                        otherkeys.append(elem[idx])
-            KEYS[key] = otherkeys
-        if '----------------------' in line or '____________' in line: break
-    return fo, dic, IDField
-
-def ttdTxt2Dict(fin):
-    '''
-    :param fin:
-    :return: dict
-    '''
-    with open(fin, 'r') as fo:
-        current_section = ''
-        seq = ''
-        line = fo.readline()
-        commentline = 0
-        dic = {}
-        secElem = {}
-        IDField = ''
-        while (line):
-            line = fo.readline()
-            if '\n' == line: continue
-            if '----------------------' in line or '____________' in line:
-                commentline += 1
-                continue
-            if commentline == 1:
-                fo, dic, IDField = handleKey(fo, line)
-                secElem = copy.deepcopy(dic)
-                commentline += 1
-                continue
-            if commentline < 2: continue
-            if '\t' in line:
-                line = line.replace('\n', '')
-                if line.replace('\t', '') == '': continue
-                elem = line.split('\t')
-                key = elem[1]
-                # if elem[0] == elem[2] and secElem!=dic and IDField==key:
-                if IDField == key and secElem != dic:
-                    yield check_dic(secElem, fin.replace('.', '/').split('/')[-2])
-                    # yield check_dic(copy.deepcopy(secElem))
+                if commentline == 1:
+                    fo, dic, IDField = self.handleKey(fo, line)
                     secElem = copy.deepcopy(dic)
-                    # secElem['_id'] = elem[2]
+                    commentline += 1
+                    continue
+                if commentline < 2: continue
+                if '\t' in line:
+                    line = line.replace('\n', '')
+                    if line.replace('\t', '') == '': continue
+                    elem = line.split('\t')
+                    key = elem[1]
+                    if IDField == key and secElem != dic:
+                        secElem = self.filter_empty_description(secElem)
+                        yield self.check_dic(secElem, fin.replace('.', '/').split('/')[-2])
+                        secElem = copy.deepcopy(dic)
 
-                current_section = elem[1]
-                if 'value' in secElem[current_section].keys():
-                    if isinstance(secElem[current_section]['value'], str):
-                        secElem[current_section]['value'] = []
-                    secElem[current_section]['value'].append(elem[2].strip())
-                else:
-                    secElem[current_section]['value'] = elem[2].strip()
-                if len(elem) > 3:
-                    for i in range(3, len(KEYS[key]) + 3):
-                        try:
-                            secElem[key][KEYS[key][i - 3]] = elem[i].strip()
-                        except Exception as e:
-                            print(elem, e, secElem)
+                    current_section = elem[1]
+                    if 'value' in secElem[current_section].keys():
+                        if isinstance(secElem[current_section]['value'], str):
+                            secElem[current_section]['value'] = []
+                        secElem[current_section]['value'].append(elem[2].strip())
+                    else:
+                        secElem[current_section]['value'] = elem[2].strip()
+                    if len(elem) > 3:
+                        for i in range(3, len(self.KEYS[key]) + 3):
+                            try:
+                                secElem[key][self.KEYS[key][i - 3]] = elem[i].strip()
+                            except Exception as e:
+                                print(elem, e, secElem)
+            if secElem:  # Ensure the last section is yielded
+                secElem = self.filter_empty_description(secElem)
+                yield self.check_dic(secElem, fin.replace('.', '/').split('/')[-2])
 
-def ttdTxt2Dict_2(fin):
-    '''
-    for crossmatcing.tsv
-    :param fin:
-    :return: dict
-    '''
-    with open(fin, 'r') as fo:
-        current_section = ''
-        seq = ''
-        line = fo.readline()
-        commentline = 0
-        dic = {}
-        secElem = {}
-        IDField = ''
-        while (line):
+    def filter_empty_description(self, dic):
+        """Filter out entries with empty descriptions."""
+        return {k: v for k, v in dic.items() if v.get('des')}
+
+    def ttdTxt2Dict_2(self, fin):
+        '''
+        for crossmatcing.tsv
+        :param fin:
+        :return: dict
+        '''
+        with open(fin, 'r', encoding='utf-8') as fo:
+            current_section = ''
+            seq = ''
             line = fo.readline()
-            if '\n' == line: continue
-            if '----------------------' in line or '____________' in line:
-                commentline += 1
-                continue
-            if commentline == 1:
-                fo, dic, IDField = handleKey(fo, line)
-                secElem = copy.deepcopy(dic)
-                commentline += 1
-                continue
-            if commentline < 2: continue
-            if '\t' in line:
-                line = line.replace('\n', '')
-                if line.replace('\t', '') == '': continue
-                elem = line.split('\t')
-                key = elem[1]
-                # if elem[0] == elem[2] and secElem!=dic and IDField==key:
-                if IDField == key and secElem != dic:
-                    yield check_dic(secElem, fin.replace('.', '/').split('/')[-2])
-                    # yield check_dic(copy.deepcopy(secElem))
+            commentline = 0
+            dic = {}
+            secElem = {}
+            IDField = ''
+            while line:
+                line = fo.readline()
+                if '\n' == line:
+                    continue
+                if '----------------------' in line or '____________' in line:
+                    commentline += 1
+                    continue
+                if commentline == 1:
+                    fo, dic, IDField = self.handleKey(fo, line)
                     secElem = copy.deepcopy(dic)
-                    # secElem['_id'] = elem[2]
-                    secElem['ChEBI_ID'] = secElem.pop('CHEBI_ID')
-                current_section = elem[1]
-                if 'value' in secElem[current_section].keys():
-                    if isinstance(secElem[current_section]['value'], str):
-                        secElem[current_section]['value'] = []
-                    secElem[current_section]['value'].append(elem[2].strip())
-                else:
-                    secElem[current_section]['value'] = elem[2].strip()
-                if len(elem) > 3:
-                    for i in range(3, len(KEYS[key]) + 3):
-                        try:
-                            secElem[key][KEYS[key][i - 3]] = elem[i].strip()
-                        except Exception as e:
-                            print(elem, e, secElem)
-    def read_abbr(tsv_file_name):
+                    commentline += 1
+                    continue
+                if commentline < 2:
+                    continue
+                if '\t' in line:
+                    line = line.replace('\n', '')
+                    if line.replace('\t', '') == '':
+                        continue
+                    elem = line.split('\t')
+                    key = elem[1]
+                    if IDField == key and secElem != dic:
+                        yield self.check_dic(secElem, fin.replace('.', '/').split('/')[-2])
+                        secElem = copy.deepcopy(dic)
+                        # 初始化 ChEBI_ID 键
+                        secElem['ChEBI_ID'] = secElem.pop('CHEBI_ID', {'des': '', 'value': ''})
+                    current_section = elem[1]
+                    if current_section not in secElem:
+                        secElem[current_section] = {'value': ''}
+                    if 'value' in secElem[current_section]:
+                        if isinstance(secElem[current_section]['value'], str):
+                            secElem[current_section]['value'] = []
+                        secElem[current_section]['value'].append(elem[2].strip())
+                    else:
+                        secElem[current_section]['value'] = elem[2].strip()
+                    if len(elem) > 3:
+                        for i in range(3, len(self.KEYS.get(key, [])) + 3):
+                            try:
+                                if key not in secElem:
+                                    secElem[key] = {}
+                                secElem[key][self.KEYS[key][i - 3]] = elem[i].strip()
+                            except Exception as e:
+                                print(elem, e, secElem)
+            if secElem:
+                yield self.check_dic(secElem, fin.replace('.', '/').split('/')[-2])
+
+    def read_abbr(self, tsv_file_name):
         """
         Read the Abbreviation section in the. tsv file
         @param tsv_file_name:
         @return: fp, dic of row_title and row_content(stored in dictionary form
         """
         fp = open(tsv_file_name, 'r', encoding='UTF-8')
-        # row_num = 0
         interval_num = 0  # Marks "------" or "_____" The number of entries encountered when reading the current file
         certain_title = ''
         certain_content = ''
@@ -153,17 +174,13 @@ def ttdTxt2Dict_2(fin):
         dic = {}
         line = fp.readline()
         row_num = 1
-        # row_title = line.strip().split("\t")  # Organize titles into lists
         while line:
             line = fp.readline()
             row_num = row_num + 1
-            # if interval_num > 1:
-            #     break
             if '\n' == line:
                 continue
             elif '-' * 5 in line or '_' * 5 in line:
                 interval_num = interval_num + 1
-                # print(row_num)
             elif interval_num == 0:
                 continue
             elif interval_num < 2:
@@ -171,9 +188,7 @@ def ttdTxt2Dict_2(fin):
                     continue
                 elif '\t' in line:
                     certain_title = line.strip().split('\t')[0]
-                    # print(certain_title)  # Index part title read from test output
                     certain_content = line.strip().split('\t')[1]
-                    # print(certain_content)  # Index part title read from test output
                     row_title.append(certain_title)
                     for index, value in enumerate(row_title):
                         if value == 'CHEBI_ID':
@@ -188,183 +203,128 @@ def ttdTxt2Dict_2(fin):
         row_splice = zip(row_title, row_content)  # Match two elements one by one
         dic = dict((key, value) for key, value in row_splice)  # Convert the list in the previous row to dictionary form
         return fp, dic
-def read_abbr(tsv_file_name):
+
+    def tsv_to_dict_generator(self, tsv_file_name):
         """
-        Read the Abbreviation section in the. tsv file
-        @param tsv_file_name:
-        @return: fp, dic of row_title and row_content(stored in dictionary form
+        Parse drug2disease.tsv and return a generator of dictionaries.
+        @param tsv_file_name: The TSV file name.
+        @return: A generator of dictionaries.
         """
-        fp = open(tsv_file_name, 'r', encoding='UTF-8')
-        # row_num = 0
-        interval_num = 0  # Marks "------" or "_____" The number of entries encountered when reading the current file
-        certain_title = ''
-        certain_content = ''
-        row_title = []  # Some elements are initialized for verification
-        row_content = []
-        dic = {}
-        line = fp.readline()
-        row_num = 1
-        # row_title = line.strip().split("\t")  # Organize titles into lists
-        while line:
-            line = fp.readline()
-            row_num = row_num + 1
-            # if interval_num > 1:
-            #     break
-            if '\n' == line:
-                continue
-            elif '-' * 5 in line or '_' * 5 in line:
-                interval_num = interval_num + 1
-                # print(row_num)
-            elif interval_num == 0:
-                continue
-            elif interval_num < 2:
-                if 'Abbreviation' in line:
-                    continue
-                elif '\t' in line:
-                    certain_title = line.strip().split('\t')[0]
-                    # print(certain_title)  # Index part title read from test output
-                    certain_content = line.strip().split('\t')[1]
-                    # print(certain_content)  # Index part title read from test output
-                    row_title.append(certain_title)
-                    for index, value in enumerate(row_title):
-                        if value == 'CHEBI_ID':
-                            row_title[index] = 'ChEBI_ID'
-                    row_content.append(certain_content)
-                else:
-                    pass
-            else:
-                pass
-            if interval_num == 2:
-                break
-        row_splice = zip(row_title, row_content)  # Match two elements one by one
-        dic = dict((key, value) for key, value in row_splice)  # Convert the list in the previous row to dictionary form
-        # print(row_title)  # Verify title list
-        # print(row_content)  # Validate Data Rows
-        # print(row_num)  # What line is currently read in the printout
-        # print(interval_num)
-        # print(dic_all)
-        # print(dic)
-        return fp, dic
-def tsv_to_json6(tsv_file_name, json_file_name):
-    """
-    # drug2disease.tsv parsing
-    @param tsv_file_name:
-    @param json_file_name:
-    @return:
-    """
-    with open(tsv_file_name, 'r', encoding='UTF-8') as fk:
-        fk, dic = read_abbr(tsv_file_name)
-        # print(dic)  # Test dictionary content
-        dic_all = []
-        dic2 = {}
-        value_list = []
-        line = fk.readline()
-        head = ["Disease entry", "ICD-11", "Clinical status"]
-        while line:
+        with open(tsv_file_name, 'r', encoding='UTF-8') as fk:
+            fk, dic = self.read_abbr(tsv_file_name)
+            value_list = []
+            dic2 = {}
             line = fk.readline()
+            head = ["Disease entry", "ICD-11", "Clinical status"]
 
-            if line == '\n' or line == '' or line=='	\n':
-                pass
-            else:
-                key = line.strip().split('\t')[0]
-                des = dic[key]
-                if des == "Indication":  # Solve multiple values in value
-                    true_value = line.strip().split('\t')[1]
-                    one = (true_value.split(": ")[0]).split(" [")[0]
-                    two = (true_value.split(": ")[1]).split("]")[0]
-                    three = (true_value.split(": ")[1]).split("] ")[1]
-                    value = [one, two, three]
+            while line:
+                line = fk.readline()
+
+                if line == '\n' or line == '' or line == '\t\n':
+                    if dic2:  # Check if dic2 is not empty
+                        yield copy.deepcopy(dic2)
+                    dic2.clear()
+                    value_list.clear()
+                    continue
                 else:
-                    value = line.strip().split('\t')[1]
-                if des == "Indication":
-                    dic2[key] = {}
-                    dic2[key]['des'] = des
-                    dic2[key]['value'] = {}
-                    row_splice = zip(head, value)  # Match two elements one by one
-                    dic3 = dict(
-                        (ky, val) for ky, val in row_splice)  # Convert the list in the previous row to dictionary form
-                    dic2[key]['value'] = value_list
-                    value_list.append(dic3)
-                else:
-                    dic2[key] = {}
-                    dic2[key]['des'] = des
-                    dic2[key]['value'] = value
-            if line == '\n' or line == ''or line=='	\n':  # Here we judge the segmentation, that is, data with different IDs
-                elem = copy.deepcopy(dic2)
-                dic_all.append(elem)
-                dic2.clear()
-                value_list.clear()
-        # print(dic_all)
-    with open(json_file_name, 'w', encoding='utf-8') as fp:
-        json.dump(dic_all, fp,indent=4)
+                    key = line.strip().split('\t')[0]
+                    des = dic.get(key, "")
+                    if des == "Indication":  # Solve multiple values in value
+                        true_value = line.strip().split('\t')[1] if len(line.strip().split('\t')) > 1 else ""
+                        one = (true_value.split(": ")[0]).split(" [")[0] if ": " in true_value else true_value
+                        two = (true_value.split(": ")[1]).split("]")[0] if ": " in true_value and "]" in \
+                                                                           true_value.split(": ")[1] else ""
+                        three = (true_value.split(": ")[1]).split("] ")[1] if ": " in true_value and "] " in \
+                                                                              true_value.split(": ")[1] else ""
+                        value = [one, two, three]
+                    else:
+                        value = line.strip().split('\t')[1] if len(line.strip().split('\t')) > 1 else ""
 
-def excel2dict(fin_csv, table='target2drug'):
-    '''
-    1.stroe csv file to mongodb
-    2.replace ' ' to '_',replace '. to '__'
-    3.create index
+                    if des == "Indication":
+                        dic2[key] = {}
+                        dic2[key]['des'] = des
+                        dic2[key]['value'] = {}
+                        row_splice = zip(head, value)  # Match two elements one by one
+                        dic3 = dict(
+                            (ky, val) for ky, val in
+                            row_splice)  # Convert the list in the previous row to dictionary form
+                        dic2[key]['value'] = value_list
+                        value_list.append(dic3)
+                    else:
+                        dic2[key] = {}
+                        dic2[key]['des'] = des
+                        dic2[key]['value'] = value
 
-    :param fin_csv:
-    :param sep: \t, , and so on
-    :return:
-    '''
-    df = pd.read_excel(fin_csv)
-    titles = []
-    for head in df.columns:
-        titles.append(head.replace(' ', '-').replace('.', '--'))
-    df.columns = titles
-    t = df.T.to_dict()
-    for v in t.values():
-        check_dic_targetName('Target_Name', table, v)
-        yield v
+            if dic2:  # Ensure the last segment is yielded
+                yield copy.deepcopy(dic2)
 
+    def excel2dict(self, fin_csv, table='target2drug'):
+        '''
+        1.store csv file to mongodb
+        2.replace ' ' to '_',replace '. to '__'
+        3.create index
 
-def csv2dict(fin_csv, sep='\t', skiprows=0):
-    '''
-    1.stroe csv file to mongodb
-    2.replace ' ' to '_',replace '. to '__'
-    3.create index
+        :param fin_csv:
+        :param sep: \t, , and so on
+        :return:
+        '''
+        df = pd.read_excel(fin_csv)
+        titles = []
+        for head in df.columns:
+            titles.append(head.replace(' ', '-').replace('.', '--'))
+        df.columns = titles
+        t = df.T.to_dict()
+        for v in t.values():
+            # Ensure 'Target_Name' key exists before calling check_dic_targetName
+            if 'Target_Name' in v:
+                self.check_dic_targetName('Target_Name', table, v)
+            yield v
 
-    :param fin_csv:
-    :param sep: \t, , and so on
-    :return:
-    '''
-    df = pd.read_csv(fin_csv, sep=sep, encoding='utf-8', skiprows=skiprows)
-    titles = []
-    for head in df.columns:
-        titles.append(head.replace(' ', '-').replace('.', '--'))
-    df.columns = titles
-    t = df.T.to_dict()
-    for v in t.values():
-        part_dic(v)
-        yield v
+    def csv2dict(self, fin_csv, sep='\t', skiprows=0):
+        '''
+        1.stroe csv file to mongodb
+        2.replace ' ' to '_',replace '. to '__'
+        3.create index
 
+        :param fin_csv:
+        :param sep: \t, , and so on
+        :return:
+        '''
+        df = pd.read_csv(fin_csv, sep=sep, encoding='utf-8', skiprows=skiprows)
+        titles = []
+        for head in df.columns:
+            titles.append(head.replace(' ', '-').replace('.', '--'))
+        df.columns = titles
+        t = df.T.to_dict()
+        for v in t.values():
+            self.part_dic(v)
+            yield v
 
-def check_dic(dic, table):
-    # if dic['TARGETID']['value']=='T00033':
-    #     print()
-    for key in list(dic.keys()):
-        if key == '_id': continue
-        if 'value' not in dic[key].keys():
-            del dic[key]
-        else:
-            check_dic_targetName(key, table, dic)
-            check_dic_CHEBI_ID(key, table, dic)
-            if ';' in dic[key]['value']: dic[key]['value'] = [x.strip() for x in dic[key]['value'].split(';')]
-            # if isinstance(dic[key]['value'],str):dic[key]['value']=dic[key]['value'].strip()
-            # if key in ['UNIPROID','GENENAME']:
+    def check_dic(self, dic, table):
+        for key in list(dic.keys()):
+            if key == '_id':
+                continue
+            # 如果 'value' 键不存在，设置一个默认的空值
+            if 'value' not in dic[key]:
+                dic[key]['value'] = ""
+
+            self.check_dic_targetName(key, table, dic)
+            self.check_dic_CHEBI_ID(key, table, dic)
+
+            if isinstance(dic[key]['value'], str) and ';' in dic[key]['value']:
+                dic[key]['value'] = [x.strip() for x in dic[key]['value'].split(';')]
+
             if key in ['UNIPROID']:
-                if '-' in dic[key]['value'] or '/' in dic[key]['value']:
-                    dic[key]['value'] = dic[key]['value'].replace('/', '-')
-                    dic[key]['value'] = [x.strip() for x in dic[key]['value'].split('-')]
-                    key = 'GENENAME'
-                    if '-' in dic[key]['value'] and ' ' not in dic[key]['value']:
+                if isinstance(dic[key]['value'], str):
+                    if '-' in dic[key]['value'] or '/' in dic[key]['value']:
                         dic[key]['value'] = dic[key]['value'].replace('/', '-')
                         dic[key]['value'] = [x.strip() for x in dic[key]['value'].split('-')]
-                        # print(dic['TARGETID']['value'],dic[key]['value'],dic['UNIPROID']['value'])
+                    key = 'GENENAME'
+                    value = dic.get(key, {}).get('value', "")
+                    if '-' in value and ' ' not in value:  # 现在使用变量value而不是直接访问dic[key]['value']
+                        dic[key]['value'] = dic[key]['value'].replace('/', '-')
+                        dic[key]['value'] = [x.strip() for x in dic[key]['value'].split('-')]
 
-                # if '/' in dic[key]['value']:
-                #     dic[key]['value']=[x.strip() for x in dic[key]['value'].split('/')]
             if key == 'INDICATI' and 'TARGETID' in dic:
                 if 'Disease Entry [ICD-11]' in dic[key]:
                     if '[ICD-11' in dic[key]['Disease Entry [ICD-11]']:
@@ -379,6 +339,7 @@ def check_dic(dic, table):
                         if '/' in elem['name']:
                             elem['name'] = [x.strip() for x in elem['name'].split('/')]
                         dic[key]['Disease Entry [ICD-11]'] = elem
+
             # drug2disease
             if key == 'INDICATI' and 'TTDDRUID' in dic:
                 if isinstance(dic[key]['value'], list):
@@ -401,8 +362,6 @@ def check_dic(dic, table):
                     if '/' in dic[key]['value']['name']:
                         dic[key]['value']['name'] = [x.strip() for x in dic[key]['value']['name'].split('/')]
 
-                # global count
-                # count += 1
             if key in ['KEGGPATH', 'WIKIPATH', 'NET_PATH', 'INTEPATH', 'PANTPATH', 'REACPATH', 'WHIZPATH']:
                 if isinstance(dic[key]['value'], list):
                     for idx, x in enumerate(dic[key]['value']):
@@ -414,84 +373,77 @@ def check_dic(dic, table):
                     if ':' in x:
                         dic[key]['value'] = {}
                         dic[key]['value']['id'], dic[key]['value']['name'] = x.split(':', 1)
-    return dic
+        return dic
 
+    def check_dic_targetName(self, key, table, dic):
+        for t, k in [('target', 'TARGNAME'), ('target2disease', 'TARGNAME'), ('target2drug', 'Target_Name')]:
+            if table == t and k == key:
+                if key in dic:  # 确保键存在
+                    x = dic[key]['value'] if t != 'target2drug' else dic[key]
+                    if '(' in x and ')' in x:
+                        vs = [
+                            x[:x.index('(')].strip(),
+                            x[x.index('(') + 1:x.index(')')].strip()
+                        ]
+                    else:
+                        vs = [x.strip()] if isinstance(x, str) else x
+                    if t == 'target2drug':
+                        dic[key] = vs
+                    else:
+                        dic[key]['value'] = vs
 
-def check_dic_targetName(key, table, dic):
-    # Fibroblast growth factor receptor 1 (FGFR1) == > [Fibroblast growth factor receptor 1, FGFR1]
-    for t, k in [('target', 'TARGNAME'), ('target2disease', 'TARGNAME'), ('target2drug', 'Target_Name')]:
-        if table == t and k == key:
-            x = dic[key]['value'] if t != 'target2drug' else dic[key]
-            if '(' in x and ')' in x:
-                vs = [
-                    x[:x.index('(')].strip(),
-                    x[x.index('(') + 1:x.index(')')].strip()
-                ]
-            if t == 'target2drug':
-                dic[key] = vs
-            else:
-                dic[key]['value'] = vs
+    def check_dic_CHEBI_ID(self, key, table, dic):
+        if table != 'crossmatching': return
+        if key != 'CHEBI_ID': return
+        if ':' in dic[key]['value']: dic[key]['value'] = dic[key]['value'].split(':')[1]
 
-def check_dic_CHEBI_ID(key, table, dic):
-    if table != 'crossmatching': return
-    if key != 'CHEBI_ID': return
-    if ':' in dic[key]['value']: dic[key]['value'] = dic[key]['value'].split(':')[1]
-    # print(dic[key]['value'])
+    def part_dic(self, dic):
+        for key in dic:
+            if key in ['ICD11', 'ICD10', 'ICD9']:
+                if ':' in dic[key]:
+                    dic[key] = dic[key].split(':')[1].strip()
+                    if '-' in dic[key]:
+                        dic[key] = [x.strip() for x in dic[key].split('-')]
+                    if ',' in dic[key]:
+                        dic[key] = [x.strip() for x in dic[key].split(',')]
 
+    def parse(self, table, cfgfile='../conf/drugkb_test.config'):
+        config = configparser.ConfigParser()
+        config.read(cfgfile)
+        section = 'ttd'
+        tables = config.get(section, 'tables')[1:-1].split(',')
+        data_paths = [config.get(section, f'data_path_{i + 1}') for i in range(len(tables))]
 
-def part_dic(dic):
-    for key in dic:
-        if key in ['ICD11', 'ICD10', 'ICD9']:
-            if ':' in dic[key]:
-                dic[key] = dic[key].split(':')[1].strip()
-                if '-' in dic[key]:
-                    dic[key] = [x.strip() for x in dic[key].split('-')]
-                if ',' in dic[key]:
-                    dic[key] = [x.strip() for x in dic[key].split(',')]
+        if table not in tables:
+            raise ValueError(f"Table {table} is not in the configuration.")
 
+        idx = tables.index(table)
+        fin_csv = os.path.join(config.get(section, f'data_path_{idx + 1}'))
 
-def toJson(dics, fout_json):
-    with open(fout_json, 'w') as json_f:
-        json.dump(dics, json_f, indent=4)
-
-
-def parse(cfgfile='../conf/drugkb_test.config'):
-    config = configparser.ConfigParser()
-    # cfgfile = '../../../conf/drugkb.config'
-    config.read(cfgfile)
-    section = 'ttd'
-    tables = config.get(section, 'tables')[1:-1].split(',')
-    for idx in range(4, int(config.get(section, 'col_num'))-5):
-        fin_csv = os.path.join(config.get(section, 'data_path_%d' % (idx + 1)))
-        fout_json = os.path.join(config.get(section, 'json_path_%d' % (idx + 1)))
-        # if '/crossmatching.json' not in fout_json:continue
-        print(idx, fin_csv, fout_json)
         if idx == 2:
-            dics = [x for x in ttdTxt2Dict_2(fin_csv)]
-
-        elif idx ==4:
-            tsv_to_json6(fin_csv, fout_json)
-            # dics = [x for x in tsv_to_json6(fin_csv,fout_json)]
-            # for i in ttdTxt2Dict_3(fin_csv):
-            #     print(i)
-            break
+            return self.ttdTxt2Dict_2(fin_csv)
+        elif idx == 4:
+            return self.tsv_to_dict_generator(fin_csv)
         elif idx == 6:  # xlsx  col_name_6 = source_ttd_target2drug
-            dics = [x for x in excel2dict(fin_csv, tables)]
+            return self.excel2dict(fin_csv, table)
         elif idx == 7:
-            dics = [x for x in csv2dict(fin_csv, skiprows=15)]
+            return self.csv2dict(fin_csv, skiprows=15)
         elif idx in [8, 9]:
-            dics = [x for x in csv2dict(fin_csv, skiprows=17)]
+            return self.csv2dict(fin_csv, skiprows=17)
         else:
-            dics = [x for x in ttdTxt2Dict(fin_csv)]
-        toJson(dics, fout_json)
+            return self.ttdTxt2Dict(fin_csv)
 
 
 if __name__ == '__main__':
-    print('start', time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
-    start = time.time()
-    count = 0
+    ttd_parser = TtdParser()
+    data_paths = ttd_parser.data_paths
+    for idx, data_path in enumerate(data_paths):
+        table_name = ttd_parser.tables[idx]
+        print(f"正在解析表: {table_name} 文件: {data_path}")
+        try:
+            for parsed_data in ttd_parser.parse(table_name):
+                print(parsed_data)
+                break
+        except ValueError as e:
+            print(f"错误: {e}")
 
-    parse()
-    # print(count)
-    print('stop', time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
-    print('time', time.time() - start)
