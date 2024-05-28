@@ -1,194 +1,213 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
+# @Time    : 2020/8/30
+# @Author  : Yuanzhao Guo
+# @Email   : guoyz@nenu
+# @File    : Binding.py
+# @Software: PyCharm
+
+""" Index Nsids csv dataset with MongoDB"""
+#########################################################################################################################################
+
 import csv
-import os
 import configparser
-from tqdm import tqdm
+
 
 class BiogridParser:
-    def __init__(self):
-        pass
+    def __init__(self, config_file="../conf/drugkb_test.config"):
+        self.config = configparser.ConfigParser()
+        self.config.read(config_file)
+        self.cfgfile = config_file
 
-    def parse(self, data_path):
-        txt_file = os.path.join(data_path, "BIOGRID-ALL-4.4.226.mitab.txt")
-        with open(txt_file, 'r', encoding='utf-8') as txtfile:
-            file_list = txtfile.read().split('\n')
-            bar = tqdm(total=len(file_list), desc='Parsing TXT')  # 加入进度条功能
+    def to_csv(self, data_path):
+        txt_file = data_path + "BIOGRID-ALL-4.4.226.mitab.txt"
+        in_txt = open(txt_file, "r")
+        file_string = in_txt.read()
+        file_list = file_string.split('\n')
+
+        to_path = data_path + "Biogrid.csv"
+        with open(to_path, 'w', encoding='utf-8', newline='') as fp:
+            writer = csv.writer(fp)
+            rownum = 0
+            num = 0
             for row in file_list:
-                if not row.strip():  # 跳过空行
-                    continue
+                num = num + 1
+
                 ss = row.replace("\t", "!!")
                 snew = ss.split("!!")
-                each = {f'column_{i}': snew[i] for i in range(len(snew))}
-                yield self.process_row(each)  # 使用生成器逐行返回字典
-                bar.update()
-            bar.close()
+                if rownum == 0:
+                    snew[0] = 'ID Interactor A'
+                    rownum = 1
 
-    def process_row(self, each):
-        A = {}
-        if "column_4" in each and each["column_4"] is not None:  # Alt IDs Interactor A
-            if "|" in each["column_4"]:
-                tag = 1
-                for i in each["column_4"].split("|"):
-                    if ":" not in i:
-                        continue
-                    if i.split(":")[0] in A.keys():
-                        if tag == 1:
-                            exp = []
-                            exp.append(A[i.split(":")[0]])
-                            tag = 0
-                        else:
-                            exp.append(i.split(":")[1])
-                        A[i.split(":")[0]] = exp
-                    else:
-                        A[i.split(":")[0]] = i.split(":")[1]
-        B = {}
-        if "column_5" in each and each["column_5"] is not None:  # Alt IDs Interactor B
-            if "|" in each["column_5"]:
-                tag = 1
-                for i in each["column_5"].split("|"):
-                    if ":" not in i:
-                        continue
-                    if i.split(":")[0] in B.keys():
-                        if tag == 1:
-                            exp = []
-                            exp.append(B[i.split(":")[0]])
-                            tag = 0
-                        else:
-                            exp.append(i.split(":")[1])
-                        B[i.split(":")[0]] = exp
-                    else:
-                        B[i.split(":")[0]] = i.split(":")[1]
-        AA = {}
-        if "column_6" in each and each["column_6"] is not None:  # Aliases Interactor A
-            if "|" in each["column_6"]:
-                tag = 1
-                for i in each["column_6"].split("|"):
-                    if ":" not in i:
-                        continue
-                    if i.split(":")[0] in AA.keys():
-                        if tag == 1:
-                            exp = []
-                            exp.append(AA[i.split(":")[0]])
-                            tag = 0
-                        else:
-                            exp.append(i.split(":")[1])
-                        AA[i.split(":")[0]] = exp
-                    else:
-                        AA[i.split(":")[0]] = i.split(":")[1]
-        BB = {}
-        if "column_7" in each and each["column_7"] is not None:  # Aliases Interactor B
-            if "|" in each["column_7"]:
-                tag = 1
-                for i in each["column_7"].split("|"):
-                    if ":" not in i:
-                        continue
-                    if i.split(":")[0] in BB.keys():
-                        if tag == 1:
-                            exp = []
-                            exp.append(BB[i.split(":")[0]])
-                            tag = 0
-                        else:
-                            exp.append(i.split(":")[1])
-                        BB[i.split(":")[0]] = exp
-                    else:
-                        BB[i.split(":")[0]] = i.split(":")[1]
-        each["Alt IDs Interactor A"] = A
-        each["Alt IDs Interactor B"] = B
-        each["Aliases Interactor A"] = AA
-        each["Aliases Interactor B"] = BB
+                writer.writerow(snew)
 
-        if "column_0" in each and each["column_0"] is not None:  # ID Interactor A
-            if ":" in each["column_0"]:
-                A1 = {}
-                A1[each["column_0"].split(":")[0]] = each["column_0"].split(":")[1]
-                each["ID Interactor A"] = A1
+    def parse(self, data_path):
+        num = 0
+        with open(data_path + "Biogrid.csv", 'r', encoding='utf-8') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for each in reader:
+                num = num + 1
+                A = {}
+                if each["Alt IDs Interactor A"] is not None:
+                    if "|" in each["Alt IDs Interactor A"] and not each["Alt IDs Interactor A"] is None:
+                        tag = 1
+                        for i in each["Alt IDs Interactor A"].split("|"):
+                            if ":" not in i:
+                                continue
+                            if i.split(":")[0] in A.keys():
+                                if tag == 1:
+                                    exp = []
+                                    exp.append(A[i.split(":")[0]])
+                                    tag = 0
+                                else:
+                                    exp.append(i.split(":")[1])
+                                A[i.split(":")[0]] = exp
+                            else:
+                                A[i.split(":")[0]] = i.split(":")[1]
+                B = {}
+                if each["Alt IDs Interactor B"] is not None:
+                    if "|" in each["Alt IDs Interactor B"] and not each["Alt IDs Interactor B"] is None:
+                        tag = 1
+                        for i in each["Alt IDs Interactor B"].split("|"):
+                            if ":" not in i:
+                                continue
+                            if i.split(":")[0] in B.keys():
+                                if tag == 1:
+                                    exp = []
+                                    exp.append(B[i.split(":")[0]])
+                                    tag = 0
+                                else:
+                                    exp.append(i.split(":")[1])
+                                B[i.split(":")[0]] = exp
+                            else:
+                                B[i.split(":")[0]] = i.split(":")[1]
+                AA = {}
+                if each["Aliases Interactor A"] is not None:
+                    if "|" in each["Aliases Interactor A"] and not each["Aliases Interactor A"] is None:
+                        tag = 1
+                        for i in each["Aliases Interactor A"].split("|"):
+                            if ":" not in i:
+                                continue
+                            if i.split(":")[0] in AA.keys():
+                                if tag == 1:
+                                    exp = []
+                                    exp.append(AA[i.split(":")[0]])
+                                    tag = 0
+                                else:
+                                    exp.append(i.split(":")[1])
+                                AA[i.split(":")[0]] = exp
+                            else:
+                                AA[i.split(":")[0]] = i.split(":")[1]
+                BB = {}
+                if each["Aliases Interactor B"] is not None:
+                    if "|" in each["Aliases Interactor B"] and not each["Aliases Interactor B"] is None:
+                        tag = 1
+                        for i in each["Aliases Interactor B"].split("|"):
+                            if ":" not in i:
+                                continue
+                            if i.split(":")[0] in BB.keys():
+                                if tag == 1:
+                                    exp = []
+                                    exp.append(BB[i.split(":")[0]])
+                                    tag = 0
+                                else:
+                                    exp.append(i.split(":")[1])
+                                BB[i.split(":")[0]] = exp
+                            else:
+                                BB[i.split(":")[0]] = i.split(":")[1]
 
-        if "column_1" in each and each["column_1"] is not None:  # ID Interactor B
-            if ":" in each["column_1"]:
-                A2 = {}
-                A2[each["column_1"].split(":")[0]] = each["column_1"].split(":")[1]
-                each["ID Interactor B"] = A2
+                each["Alt IDs Interactor A"] = A
+                each["Alt IDs Interactor B"] = B
+                each["Aliases Interactor A"] = AA
+                each["Aliases Interactor B"] = BB
 
-        if "column_8" in each and each["column_8"] is not None:  # Publication Identifiers
-            if ":" in each["column_8"]:
-                A3 = {}
-                A3[each["column_8"].split(":")[0]] = each["column_8"].split(":")[1]
-                each["Publication Identifiers"] = A3
+                if each["ID Interactor A"] != None:
+                    if ":" in each["ID Interactor A"]:
+                        A1 = {}
+                        A1[each["ID Interactor A"].split(":")[0]] = each["ID Interactor A"].split(":")[1]
+                        each["ID Interactor A"] = A1
 
-        if "column_9" in each and each["column_9"] is not None:  # Taxid Interactor A
-            if ":" in each["column_9"]:
-                A4 = {}
-                A4[each["column_9"].split(":")[0]] = each["column_9"].split(":")[1]
-                each["Taxid Interactor A"] = A4
+                if each["ID Interactor B"] != None:
+                    if ":" in each["ID Interactor B"]:
+                        A2 = {}
+                        A2[each["ID Interactor B"].split(":")[0]] = each["ID Interactor B"].split(":")[1]
+                        each["ID Interactor B"] = A2
 
-        if "column_10" in each and each["column_10"] is not None:  # Taxid Interactor B
-            if ":" in each["column_10"]:
-                A5 = {}
-                A5[each["column_10"].split(":")[0]] = each["column_10"].split(":")[1]
-                each["Taxid Interactor B"] = A5
+                if each["Publication Identifiers"] != None:
+                    if ":" in each["Publication Identifiers"]:
+                        A3 = {}
+                        A3[each["Publication Identifiers"].split(":")[0]] = each["Publication Identifiers"].split(":")[1]
+                        each["Publication Identifiers"] = A3
 
-        if "column_12" in each and each["column_12"] is not None:  # Interaction Identifiers
-            if ":" in each["column_12"]:
-                A6 = {}
-                A6[each["column_12"].split(":")[0]] = each["column_12"].split(":")[1]
-                each["Interaction Identifiers"] = A6
+                if each["Taxid Interactor A"] != None:
+                    if ":" in each["Taxid Interactor A"]:
+                        A4 = {}
+                        A4[each["Taxid Interactor A"].split(":")[0]] = each["Taxid Interactor A"].split(":")[1]
+                        each["Taxid Interactor A"] = A4
 
-        if "column_15" in each and each["column_15"] is not None:  # Confidence Values
-            if ":" in each["column_15"]:
-                A7 = {}
-                A7[each["column_15"].split(":")[0]] = each["column_15"].split(":")[1]
-                each["Confidence Values"] = A7
+                if each["Taxid Interactor B"] != None:
+                    if ":" in each["Taxid Interactor B"]:
+                        A5 = {}
+                        A5[each["Taxid Interactor B"].split(":")[0]] = each["Taxid Interactor B"].split(":")[1]
+                        each["Taxid Interactor B"] = A5
 
-        if "column_11" in each and each["column_11"] is not None:  # Interaction Types
-            if ":" in each["column_11"] and len(each["column_11"].split(":")) == 3:
-                A8 = {}
-                A88 = {}
-                A888 = each["column_11"].split(":")[2].replace("\"", " ")
-                A88[each["column_11"].split(":")[1][1:]] = A888
-                A8[each["column_11"].split(":")[0]] = A88
-                each["Interaction Identifiers"] = A8
+                if each["Taxid Interactor B"] != None:
+                    if ":" in each["Interaction Identifiers"]:
+                        A6 = {}
+                        A6[each["Interaction Identifiers"].split(":")[0]] = each["Interaction Identifiers"].split(":")[1]
+                        each["Interaction Identifiers"] = A6
 
-        if "column_17" in each and each["column_17"] is not None:  # Source Database
-            if ":" in each["column_17"] and len(each["column_17"].split(":")) == 3:
-                A9 = {}
-                A99 = {}
-                A999 = each["column_17"].split(":")[2].replace("\"", " ")
-                A99[each["column_17"].split(":")[1][1:]] = A999
-                A9[each["column_17"].split(":")[0]] = A99
-                each["Source Database"] = A9
+                if each["Confidence Values"] != None:
+                    if ":" in each["Confidence Values"]:
+                        A7 = {}
+                        A7[each["Confidence Values"].split(":")[0]] = each["Confidence Values"].split(":")[1]
+                        each["Confidence Values"] = A7
 
-        if "column_13" in each and each["column_13"] is not None:  # Interaction Detection Method
-            if ":" in each["column_13"] and len(each["column_13"].split(":")) == 3:
-                A110 = {}
-                A1100 = {}
-                A11000 = each["column_13"].split(":")[2].replace("\"", " ")
-                A1100[each["column_13"].split(":")[1][1:]] = A11000
-                A110[each["column_13"].split(":")[0]] = A1100
-                each["Interaction Detection Method"] = A110
+                if each["Interaction Types"] != None:
+                    if ":" in each["Interaction Types"] and len(each["Interaction Types"].split(":")) == 3:
+                        A8 = {}
+                        A88 = {}
+                        A888 = each["Interaction Types"].split(":")[2].replace("\"", " ")
+                        A88[each["Interaction Types"].split(":")[1][1:]] = A888
+                        A8[each["Interaction Types"].split(":")[0]] = A88
+                        each["Interaction Identifiers"] = A8
 
-        if "" in each.keys():
-            del each[""]
+                if each["Source Database"] != None:
+                    if ":" in each["Source Database"] and len(each["Source Database"].split(":")) == 3:
+                        A9 = {}
+                        A99 = {}
+                        A999 = each["Source Database"].split(":")[2].replace("\"", " ")
+                        A99[each["Source Database"].split(":")[1][1:]] = A999
+                        A9[each["Source Database"].split(":")[0]] = A99
+                        each["Source Database"] = A9
 
-        if "column_14" in each and each["column_14"] is not None:  # Publication 1st Author
-            each["Publication 1st Author"] = each["column_14"][1:-1]
+                if each["Interaction Types"] != None:
+                    if ":" in each["Interaction Detection Method"] and len(
+                            each["Interaction Detection Method"].split(":")) == 3:
+                        A110 = {}
+                        A1100 = {}
+                        A11000 = each["Interaction Detection Method"].split(":")[2].replace("\"", " ")
+                        A1100[each["Interaction Detection Method"].split(":")[1][1:]] = A11000
+                        A110[each["Interaction Detection Method"].split(":")[0]] = A1100
+                        each["Interaction Detection Method"] = A110
 
-        return each
+                if "" in each.keys():
+                    del each[""]
 
-#########################################################################################################################################
+                if each["Publication 1st Author"] != None:
+                    each["Publication 1st Author"] = each["Publication 1st Author"][1:-1]
+
+                yield each
+
+    def run(self):
+        for i in range(0, int(self.config.get('biogrid', 'data_path_num'))):
+            self.to_csv(self.config.get('biogrid', 'data_path_' + str(i + 1)))
+            for record in self.parse(self.config.get('biogrid', 'data_path_' + str(i + 1))):
+                yield record
+
+
 if __name__ == '__main__':
-    cfgfile = "../conf/drugkb_test.config"
-    config = configparser.ConfigParser()
-    config.read(cfgfile)
-    biogrid_parser = BiogridParser()
-
-    for i in range(0, int(config.get('biogrid', 'data_path_num'))):
-        data_path = config.get('biogrid', 'data_path_' + str(i + 1))
-        dict_data_generator = biogrid_parser.parse(data_path)
-
-        # 只输出一个字典
-        first_entry = next(dict_data_generator)
-        print(first_entry)
-
-        # 如果只需要处理一个文件，添加一个break
-        break
+    parser = BiogridParser()
+    for record in parser.run():
+        print(record)
+        # break

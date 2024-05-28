@@ -1,28 +1,19 @@
-"""
-  -*- encoding: utf-8 -*-
-  @Author: zhaojingtong
-  @Time  : 2023/10/15 18:41
-  @Email: 2665109868@qq.com
-  @function
-"""
-
-# -*- coding: utf-8 -*-
-""" Index dgidb dataset with MongoDB"""
 import os
 import configparser
 
 class DGIDBParser:
+    def __init__(self, config_path='../conf/drugkb_test.config'):
+        self.config = configparser.ConfigParser()
+        self.config.read(config_path)
+        self.data_paths = [self.config.get('dgidb', f'data_path_{i + 1}') for i in range(int(self.config.get('dgidb', 'data_path_num')))]
 
-    def __init__(self, data_path):
-        self.data_path = data_path
-
-    def parse(self):
-        file_list = os.listdir(self.data_path)
+    def parse(self, data_path):
+        file_list = os.listdir(data_path)
         if not file_list:
-            print("No files found in the directory:", self.data_path)
+            print("No files found in the directory:", data_path)
             return []
 
-        file_path = os.path.join(self.data_path, file_list[0])
+        file_path = os.path.join(data_path, file_list[0])
         print(f"Reading file: {file_path}")
 
         try:
@@ -51,21 +42,20 @@ class DGIDBParser:
 
         return parsed_data  # 返回解析的数据字典列表
 
+    def test(self):
+        all_data = []
+        for data_path in self.data_paths:
+            print(f"Processing data path: {data_path}")
+            data = self.parse(data_path)
+            if data:
+                all_data.append(data[0])  # 只保存每个文件的第一个条目
+            else:
+                print("No data parsed.")
+        return all_data
+
 
 if __name__ == '__main__':
-    config = configparser.ConfigParser()
-    cfgfile = '../conf/drugkb_test.config'
-    config.read(cfgfile)
-
-    for i in range(int(config.get('dgidb', 'data_path_num'))):
-        data_path = config.get('dgidb', 'data_path_' + str(i + 1))
-        print(f"Processing data path: {data_path}")
-
-        parser = DGIDBParser(data_path)
-        data = parser.parse()
-
-        if data:
-            print(data[0])  # 打印第一个元素
-            break  # 处理完第一组数据后停止循环
-        else:
-            print("No data parsed.")
+    parser = DGIDBParser()
+    test_all_parsed_data = parser.test()
+    for data in test_all_parsed_data:
+        print(data)  # 打印每个数据路径解析出的第一个条目

@@ -34,6 +34,6 @@ if __name__ == '__main__':
 
     for data_dict in parser.doParse(fin_txt):
         mongo_inserter.insert_dict(data_dict)  # Insert each parsed dict into MongoDB
-        break  # Just for testing, insert only the first dictionary
+        # break  # Just for testing, insert only the first dictionary
 
     mongo_inserter.close()
