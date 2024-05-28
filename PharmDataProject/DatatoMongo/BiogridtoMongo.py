@@ -4,24 +4,25 @@ from PharmDataProject.Utilities.Database.dbutils import DBconnection
 
 
 class BiogridToMongo:
-    def __init__(self, config_path='../conf/drugkb_test.config'):
+    def __init__(self):
+        self.confile = '../conf/drugkb_test.config'
         self.config = configparser.ConfigParser()
-        self.config.read(config_path)
+        self.config.read(self.confile)
         self.db_connection = DBconnection(
-            config_path,
+            self.confile,
             self.config.get('biogrid', 'db_name'),
             self.config.get('biogrid', 'col_name_1')
         )
-        self.biogrid_parser = BiogridParser(config_path)
+        self.biogrid_parser = BiogridParser(self.confile)
+        self.data_path = self.config.get('biogrid', 'data_path_1')
 
-    def to_mongo(self, data_path):
-        self.biogrid_parser.to_csv(data_path)
-        dict_data_generator = self.biogrid_parser.parse(data_path)
+    def to_mongo(self):
+        self.biogrid_parser.to_csv(self.data_path)
+        dict_data_generator = self.biogrid_parser.parse(self.data_path)
 
         # 获取第一个条目并插入到 MongoDB
         for entry in dict_data_generator:
             self.db_connection.collection.insert_one(entry)
-            print(f"Data successfully inserted into MongoDB from {data_path}")
 
     def close(self):
         # 关闭 MongoClient
@@ -31,11 +32,6 @@ class BiogridToMongo:
 
 if __name__ == '__main__':
     biogrid_to_mongo = BiogridToMongo()
+    biogrid_to_mongo.to_mongo()
 
-    for i in range(int(biogrid_to_mongo.config.get('biogrid', 'data_path_num'))):
-        data_path = biogrid_to_mongo.config.get('biogrid', 'data_path_' + str(i + 1))
-        biogrid_to_mongo.to_mongo(data_path)
 
-    print("Successfully finished!")
-
-    biogrid_to_mongo.close()
