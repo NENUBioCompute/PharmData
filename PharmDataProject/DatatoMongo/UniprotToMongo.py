@@ -36,5 +36,4 @@ class UniprotToMongo:
 if __name__ == '__main__':
     config_path = '../conf/drugkb_test.config'
     uniprot_to_mongo= UniprotToMongo()
-
     uniprot_to_mongo.save_to_mongodb(config_path)
