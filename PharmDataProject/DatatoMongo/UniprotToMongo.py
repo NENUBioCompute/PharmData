@@ -4,8 +4,8 @@ import configparser
 import os
 
 class UniprotToMongo:
-    def __init__(self):
-        self.config_path = '../conf/drugkb_test.config'
+    def __init__(self,config_path):
+        self.config_path = config_path
         self.config = configparser.ConfigParser()
         self.config.read(self.config_path)
         self.infile = self.config.get('uniprot', 'data_path_1') + 'uniprot_sprot.xml.gz'
@@ -34,8 +34,7 @@ class UniprotToMongo:
             self.db.collection.insert_many(records)
 
 if __name__ == '__main__':
-
-
+    config_path = '../conf/drugkb_test.config'
     uniprot_to_mongo= UniprotToMongo()
 
-    uniprot_to_mongo.save_to_mongodb()
+    uniprot_to_mongo.save_to_mongodb(config_path)
