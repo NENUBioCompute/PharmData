@@ -11,7 +11,7 @@ import configparser
 from PharmDataProject.Utilities.Database.dbutils import DBconnection
 
 
-class BindingdbParser:
+class TwosidesParser:
     def __init__(self, csv_path: str, all_field=True):
         self.csv_path = csv_path
         self.csv_property = {"newline": '\n', "encoding": 'utf-8', "delimiter": ','}
@@ -82,7 +82,7 @@ class BindingdbParser:
 if __name__ == "__main__":
 
     config = configparser.ConfigParser()
-    cfgfile = '../conf/drugkb.config'
+    cfgfile = '../conf/drugkb_test.config'
     config.read(cfgfile)
 
     for i in range(0, int(config.get('twosides', 'data_path_num'))):
@@ -91,10 +91,7 @@ if __name__ == "__main__":
 
         data_path = config.get('twosides', 'data_path_' + str(i + 1))
 
-        # logging.basicConfig(level=logging.INFO,
-        #                     format='%(asctime)s %(levelname)s %(message)s',
-        #                     datefmt='%m/%d %I:%M:%S')
-        iter_drug = BindingdbParser(data_path).parse()
+        iter_drug = TwosidesParser(data_path).parse()
         for index, item in enumerate(iter_drug):
             db.collection.insert_one(item)
             if index % 10000 == 0:

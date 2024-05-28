@@ -85,6 +85,7 @@ class FAERSParser:
     def parser_all_data(self):
         zip_file_paths = self.get_zip_file_path()
         for zip_file_path in zip_file_paths:
+            print(zip_file_path)
             try:
                 merged_data = self.faers_parse(zip_file_path)
             except Exception as e:
