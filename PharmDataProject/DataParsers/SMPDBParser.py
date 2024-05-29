@@ -16,9 +16,9 @@ from PharmDataProject.Utilities.FileDealers.ConfigParser import ConfigParser
 
 
 class SMPDBParser:
-    def __init__(self, config):
-        self.config = config
-        self.data_path = config.get("smpdb", "data_path")
+    def __init__(self, cfg):
+        self.config = ConfigParser.get_config(cfg)
+        self.data_path = self.config.get("smpdb", "data_path")
 
     def __csvs2dicts(self, dir_path: str):
         return [pd.read_csv(os.path.join(dir_path, filename)).to_dict(orient='records') for filename in
