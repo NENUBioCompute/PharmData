@@ -4,11 +4,14 @@ import random
 import re
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
+
 import requests
 from lxml import etree
+
 from PharmDataProject.Utilities.Database.dbutils_v2 import DBConnection
 from PharmDataProject.Utilities.FileDealers.ConfigParser import ConfigParser
+
 
 def ua_init():
     base_user_agent = 'Mozilla/5.0 (Windows NT {0}; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{1}.0.{2}.{3} Safari/537.36'
@@ -18,6 +21,7 @@ def ua_init():
                                         random.choice([i + 1 for i in range(99)]),
                                         )
     return user_agent
+
 
 class ICD11Parser:
     def __init__(self):
@@ -77,12 +81,16 @@ class ICD11Parser:
         return response
 
     def __get_root_ids(self):
-        root_concepts_url = self.__get_config_value("json_get_root_concepts_url")
+        """
+        get root id list
+        """
+        root_concepts_url = config.get("json_get_root_concepts_url")
         params = {"useHtml": "true"}
         resp = self.__get_resp(root_concepts_url, params)
         if resp is None:
             raise requests.RequestException("Root concept id acquiring failed. Network issue, out of max try.")
         root_data = [(item.get('ID'), item.get('isLeaf')) for item in resp.json()]
+
         threads = [threading.Thread(target=self.__get_children_id, args=(arg[0], arg[1])) for arg in root_data]
         for thread in threads:
             thread.start()
@@ -90,14 +98,18 @@ class ICD11Parser:
             thread.join()
 
     def __get_children_id(self, id, is_leaf):
+        """
+        Get children list.
+        """
         if is_leaf:
+            # avoid duplicate id
             old_len = len(self.ids)
             self.ids.add(id)
             if old_len == len(self.ids):
                 return
             self.id_queue.put(id)
         else:
-            children_concepts_url = self.__get_config_value("json_get_children_concepts_url")
+            children_concepts_url = config.get("json_get_children_concepts_url")
             params = {
                 "ConceptId": id,
                 "useHtml": "true",
@@ -113,14 +125,19 @@ class ICD11Parser:
                 self.__get_children_id(item.get('ID'), item.get('isLeaf'))
 
     def __save_info(self, id):
+        """
+        Store corresponding page data according to id
+        """
+
         def deal_str(string):
+            """对字符串进行清洗和格式化"""
             new_str = re.sub('\\s{2,}', ' ', re.sub('(\t|\r|\n|\xa0)+', ' ', string).replace(',', '，').strip()).replace(
                 '\u200b', '').replace("\u3000", '')
             return new_str
 
-        url = self.__get_config_value("get_content_url")
+        url = config.get("get_content_url")
         params = {"ConceptId": id}
-        data = {'url': self.__get_config_value("data_url_prefix") + id}
+        data = {'url': config.get("data_url_prefix") + id}
 
         if self.db.search_record(data) is not None:
             logging.info(f"A saved data record found with ID: {id}")
@@ -134,6 +151,7 @@ class ICD11Parser:
             if resp is None:
                 self.retry_queue.put(("concept", id))
                 return
+
             sel = etree.HTML(resp.text)
             sel_counter -= 1
             if sel_counter == 0:
@@ -143,6 +161,8 @@ class ICD11Parser:
 
         all_name = ''.join(sel.xpath("string(//div[@class='detailsTitle'])"))
         all_name = deal_str(all_name) if all_name else ''
+
+        # To prevent cases where the request status code is 200 but the data retrieval fails
         if all_name:
             first_name = sel.xpath("//div[@class='detailsTitle']/span/text()")
             last_name = ''.join(sel.xpath("//div[@class='detailsTitle']/text()")).strip()
@@ -151,10 +171,23 @@ class ICD11Parser:
             data['disease_id'] = first_name[0] if first_name else ''
             data['disease_name'] = last_name if last_name else ''
             data['description'] = description if description else ''
+            if len(self.buffer_data) >= self.buffer_data_size:
+                self.saved_data_counter += len(self.buffer_data)
+                logging.info(f"Saved Record: {self.saved_data_counter}")
+                self.db.insert(self.buffer_data)
+                self.buffer_data = []
+            self.counter += 1
+            elapsed_time = datetime.now() - self.start_time
+            # for debug
+            print(
+                f"\rCount: {self.counter}, Elapse time: {elapsed_time}, average_elapsed_time: {timedelta(seconds=elapsed_time.seconds) / self.counter}",
+                end='')
             self.buffer_data.append(data)
-        return data
 
     def __retry(self):
+        """
+        Retry failed tasks.
+        """
         logging.info("Retrying starts.")
         while not self.retry_queue.empty():
             task_info = self.retry_queue.get()
@@ -168,17 +201,21 @@ class ICD11Parser:
     def __parse(self):
         self.__get_root_ids()
         self.__retry()
+
         def get_data():
             try:
                 while True:
                     self.__save_info(self.id_queue.get(block=False))
             except queue.Empty:
                 return
-        threads = [threading.Thread(target=get_data) for _ in range(int(self.__get_config_value("thread_num")))]
+
+        # save_info
+        threads = [threading.Thread(target=get_data) for _ in range(int(config.get("thread_num")))]
         for thread in threads:
             thread.start()
         for thread in threads:
             thread.join()
+        # insert the left data
         if len(self.buffer_data) > 0:
             self.saved_data_counter += len(self.buffer_data)
             logging.info(f"Saved Record: {self.saved_data_counter}")
@@ -188,13 +225,17 @@ class ICD11Parser:
     def start(self, config):
         self.config = config
         self.buffer_data_size = int(config.get("data_buffer_size"))
-        self.db = DBConnection(config.get("db_name"), config.get("collection_name"), config=config)
+        self.db = DBConnection(config.get("db_name"), config.get("collection_name"),
+                               config=config)
         self.__parse()
 
+
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s', datefmt='%m/%d %I:%M:%S')
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(asctime)s %(levelname)s %(message)s',
+                        datefmt='%m/%d %I:%M:%S')
     icd11_parser = ICD11Parser()
-    cfg = "../../tmpcode/PharmData/PharmDataProject/conf/drugkb.config"
+    cfg = "../conf/drugkb_test.config"
     config = ConfigParser(cfg)
     config.set_section("icd11")
     icd11_parser.start(config)
