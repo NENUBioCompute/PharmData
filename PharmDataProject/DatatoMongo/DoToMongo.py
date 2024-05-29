@@ -3,8 +3,10 @@ from PharmDataProject.Utilities.Database.dbutils import DBconnection
 from PharmDataProject.DataParsers.DoParser import DoParser
 
 class DoToMongo:
-    def __init__(self, db_connection):
-        self.db_connection = db_connection
+    def __init__(self, cfgfile):
+        self.config = configparser.ConfigParser()
+        self.config.read(cfgfile)
+        self.db_connection = DBconnection(cfgfile, self.config.get('do', 'db_name'), self.config.get('do', 'col_name_1'))
 
     def insert_dict(self, data_dict):
         """Insert a single dictionary into MongoDB."""
@@ -13,22 +15,24 @@ class DoToMongo:
     def close(self):
         """Close the MongoDB connection."""
         self.db_connection.my_db.client.close()  # 关闭数据库连接
+    def save_to_mongo(self):
+        for i in range(0, int(self.config.get('do', 'data_path_num'))):
+            datapath = self.config.get('do', 'data_path_' + str(i + 1))
+            parser = DoParser(datapath)
+
+            mongo_saver = DoToMongo(cfgfile)
+
+            for data_dict in parser.parse():
+                mongo_saver.insert_dict(data_dict)  # Insert each parsed dict into MongoDB
+
+            mongo_saver.close()
 
 if __name__ == '__main__':
-    config = configparser.ConfigParser()
+
     cfgfile = '../conf/drugkb_test.config'
-    config.read(cfgfile)
 
-    for i in range(0, int(config.get('do', 'data_path_num'))):
-        datapath = config.get('do', 'data_path_' + str(i + 1))
-        parser = DoParser(datapath)
 
-        db_connection = DBconnection(cfgfile, config.get('do', 'db_name'), config.get('do', 'col_name_' + str(i + 1)))
-        mongo_saver = DoToMongo(db_connection)
+    dotomongo = DoToMongo(cfgfile)
+    dotomongo.save_to_mongo()
 
-        for data_dict in parser.parse():
-            mongo_saver.insert_dict(data_dict)  # Insert each parsed dict into MongoDB
-            break  # Just for testing, insert only the first dictionary
 
-        mongo_saver.close()
-        break  # 成功打印并插入后退出循环
