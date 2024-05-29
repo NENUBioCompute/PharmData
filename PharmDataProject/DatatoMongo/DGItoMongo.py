@@ -47,6 +47,6 @@ class DGItoMongo:
                 print(f"No data parsed from {data_path}.")
 
 if __name__ == '__main__':
-    dgi_to_mongo = DGItoMongo(config_path='../conf/drugkb_test.config')
+    dgi_to_mongo = DGItoMongo()
     dgi_to_mongo.run()  # 正常入库方法，插入所有条目
     # dgi_to_mongo.test()  # 测试方法，入库所有解析路径的第一个条目
