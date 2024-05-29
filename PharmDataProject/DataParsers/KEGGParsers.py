@@ -47,6 +47,10 @@ if __name__ == "__main__":
 
     for i in range(1, int(config.get('kegg', 'data_path_num')) + 1):
         data_path = config.get('kegg', 'data_path_' + str(i))
+        if not os.path.exists(data_path):
+            # 如果路径不存在，则创建路径
+            os.makedirs(data_path)
+            print(f"Directory {data_path} created.")
         file_list = os.listdir(data_path)
         if not file_list:
             print(f"No files found in the directory: {data_path}")

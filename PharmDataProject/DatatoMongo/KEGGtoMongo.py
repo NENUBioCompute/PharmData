@@ -1,7 +1,7 @@
 import configparser
 import os
 from PharmDataProject.Utilities.Database.dbutils import DBconnection
-from KEGGParsers import KEGGParsers
+from PharmDataProject.DataParsers.KEGGParsers import KEGGParsers
 
 
 class KeggtoMongo:
