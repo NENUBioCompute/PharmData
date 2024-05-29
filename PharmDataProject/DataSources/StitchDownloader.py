@@ -20,7 +20,7 @@ class StitchDownloader:
         self.DownloadKit = DownloadKit(self.data_path)
 
     def __download_and_gunzip(self, filename, url):
-        self.DownloadKit.add(url, rename=filename).wait(show=False)
+        self.DownloadKit.add(url, rename=filename).wait(show=True)
         subprocess.run(["gunzip", os.path.join(self.data_path, filename)])
         # print(f"{filename} download successfully.")
 

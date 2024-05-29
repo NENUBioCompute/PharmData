@@ -16,7 +16,7 @@ class PharmRGKBParser:
         self.config.read(config_path)
         self.section = 'pharmgkb'
         self.tables = self.config.get(self.section, 'tables')[1:-1].split(',')
-        self.data_paths = [self.config.get(self.section, f'data_path_{i + 1}') for i in range(int(self.config.get(self.section, 'col_num')))]
+        self.data_paths = [self.config.get(self.section, f'data_path_{i + 1}')+os.path.splitext(self.config.get(self.section, f'source_url_{i + 1}').split('/')[-1])[0]+'/' for i in range(int(self.config.get(self.section, 'col_num')))]
 
     def __parse(self):
         parsed_data = {}

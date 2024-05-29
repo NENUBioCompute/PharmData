@@ -5,7 +5,7 @@
   @Email: deepwind32@163.com
 """
 from PharmDataProject.DataParsers.StitchParser import StitchParser
-from PharmDataProject.DataSources.StitchDownloader import StitchDownloader
+
 from PharmDataProject.Utilities.Database.dbutils_v2 import DBConnection
 from PharmDataProject.Utilities.FileDealers.ConfigParser import ConfigParser
 
@@ -28,7 +28,6 @@ if __name__ == "__main__":
     config.set_section("stitch")
 
     to_mongo = StitchtoMongo(config)
-    StitchDownloader(config).start()
 
     for collection_name, data in StitchParser(config).start():
         to_mongo.start(collection_name, data)

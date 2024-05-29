@@ -20,8 +20,8 @@ class StitchParser:
     def __read(self, filepath):
         print(f"Reading file: {filepath}")
         start_time = time.time()
-        with gzip.open(filepath, 'rt') as f:
-            data = pd.read_csv(f, delimiter='\t')
+        # with gzip.open(filepath, 'rt') as f:
+        data = pd.read_csv(filepath, delimiter='\t')
         print(f"Finished reading file: {filepath} in {time.time() - start_time:.2f}s")
         return data
 
@@ -67,9 +67,9 @@ class StitchParser:
         return [q.get() for _ in range(process_num)]
 
     def start(self):
-        filenames = [self.config.get("cc_links_filename"),
-                     (self.config.get("pc_links_detailed_filename"), self.config.get("pc_links_transfer_filename")),
-                     self.config.get("actions_filename")]
+        filenames = [os.path.splitext(self.config.get("cc_links_filename"))[0],
+                     (os.path.splitext(self.config.get("pc_links_detailed_filename"))[0], os.path.splitext(self.config.get("pc_links_transfer_filename"))[0]),
+                     os.path.splitext(self.config.get("actions_filename"))[0]]
         collections = [self.config.get("cc_links_collection"),
                        self.config.get("pc_links_collection"),
                        self.config.get("actions_collection")]
