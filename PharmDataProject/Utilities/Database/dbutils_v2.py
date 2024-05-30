@@ -220,7 +220,7 @@ if __name__ == "__main__":
     # disable collection empty check
     drugDB = DBConnection("drugdb", "offsides", "59.168.1.100", username="root", password="pw123", empty_check=False)
     # If you use config
-    cfg_file = "../../conf/drugkb.config"
+    cfg_file = "../../conf/drugkb_test.config"
     config = ConfigParser(cfg_file)
     drugDB = DBConnection("drugdb", "offsides", config=config)
     """

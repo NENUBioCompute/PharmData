@@ -7,7 +7,7 @@ class DBconnection(object):
     def __init__(self, dbname, host=None, port=None,
                  user=None, password=None):
         
-        cfgfile = "../../conf/drugkb.config"
+        cfgfile = "../../conf/drugkb_test.config"
         config = configparser.ConfigParser()
         config.read(cfgfile)
 

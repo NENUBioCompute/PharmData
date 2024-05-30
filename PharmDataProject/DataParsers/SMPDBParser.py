@@ -85,7 +85,7 @@ class SMPDBParser:
 
 
 if __name__ == "__main__":
-    cfg = "/home/zhaojingtong/tmpcode/PharmData/PharmDataProject/conf/drugkb.config"
+    cfg = "/home/zhaojingtong/tmpcode/PharmData/PharmDataProject/conf/drugkb_test.config"
     config = ConfigParser.get_config(cfg)
     for i in SMPDBParser(config).start():
         pprint.pprint(i)
