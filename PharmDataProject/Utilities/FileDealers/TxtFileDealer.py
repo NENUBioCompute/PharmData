@@ -97,20 +97,20 @@ class TxtFileDealer:
 
 if __name__ == "__main__":
     # Example for IterRead
-    # test = TXTFileDealer()
-    # result = test.IterRead("TXT_test.txt", 3)
+    # static = TXTFileDealer()
+    # result = static.IterRead("TXT_test.txt", 3)
     # for line in result:
     #     print(line)
     #
     # Example for IterReadMatrix
-    # test = TXTFileDealer()
-    # result = test.IterReadMatrix("TXT_test.txt", range(0, 3), range(0, 2), r"[ \n]")
+    # static = TXTFileDealer()
+    # result = static.IterReadMatrix("TXT_test.txt", range(0, 3), range(0, 2), r"[ \n]")
     # for line in result:
     #     print(line)
     # Example for IterReadMatrix
     # file_len = TXTFileDealer().FileLen("E:/net download/GSE62867_series_matrix.txt")
     # print(file_len)
-    test_file = TxtFileDealer.filewriter("E:/net download/","E:/test/",".txt")
+    test_file = TxtFileDealer.filewriter("E:/net download/","E:/static/",".txt")
     file = TxtFileDealer.IterReadMatrix("E:/net download/GSE62867_series_matrix.txt", range(27650, 30000), range(0, 24), r"[ \n\t]")
     for line in file:
         print(line)

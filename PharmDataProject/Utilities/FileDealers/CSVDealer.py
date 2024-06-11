@@ -48,7 +48,7 @@ class CSVWriter:
         """
         self.f.close()
 if __name__ == '__main__':
-    csv_handler = CSVWriter('test.csv', ['a', 'b', 'c'])
+    csv_handler = CSVWriter('static.csv', ['a', 'b', 'c'])
     csv_handler.save_single_data({'a': 1, 'b': 2, 'c': 3})
     csv_handler.save_single_data({'a': 4, 'b': 5, 'c': 6})
     csv_handler.save_single_data({'a': 7, 'b': 8, 'c': 9})

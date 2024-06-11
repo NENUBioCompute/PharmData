@@ -43,7 +43,7 @@ def file_is_exists(src: str):
     """
     try:
         # return os.path.isfile(src)
-        return os.access(src, os.F_OK)  # access() test whether the specified file of the call exists
+        return os.access(src, os.F_OK)  # access() static whether the specified file of the call exists
     except PermissionError:
         traceback.print_exc()
 
@@ -58,7 +58,7 @@ def file_is_readable(file_absolute_path):
     try:
         if not os.path.exists(file_absolute_path):  # To determine that the file with read/write permission does not exist, an exception FileNotFoundError is thrown
             raise FileNotFoundError("file not found!")
-        r_acc = os.access(file_absolute_path, os.R_OK)  # access() test whether the calling user has the specified access to the path
+        r_acc = os.access(file_absolute_path, os.R_OK)  # access() static whether the calling user has the specified access to the path
     except Exception as e:
         return e
     else:
@@ -75,7 +75,7 @@ def file_is_writable(file_absolute_path):
     try:
         if not os.path.exists(file_absolute_path):  # To determine that the file with read/write permission does not exist, an exception FileNotFoundError is thrown
             raise FileNotFoundError("file not found!")
-        w_acc = os.access(file_absolute_path, os.W_OK)  # access() test whether the calling user has the specified access to the path
+        w_acc = os.access(file_absolute_path, os.W_OK)  # access() static whether the calling user has the specified access to the path
     except Exception as e:
         return e
     else:
@@ -160,8 +160,8 @@ def files_list(src: str):
 @staticmethod
 def dirs_count(src: str):
     """
-    Number of folders under the test folder
-    @param src: Folder path to test
+    Number of folders under the static folder
+    @param src: Folder path to static
     @return: Number of folders
     """
     try:
@@ -180,8 +180,8 @@ def dirs_count(src: str):
 @staticmethod
 def files_count(src: str):
     """
-    Number of files under the test folder
-    @param src: Folder path to test
+    Number of files under the static folder
+    @param src: Folder path to static
     @return: Number of documents
     """
     try:

@@ -141,7 +141,7 @@ class Uniprot_Parser:
             print("point 01")
             xmltodict.parse(inf, item_depth=2,
                             item_callback=self.__handle_artist)
-        print('test')
+        print('static')
         self.__check_path(save_path)
         with open(save_path + 'TrEMBL.json', "w") as file_out:
             json.dump(uniprot, file_out, indent=4)

@@ -14,10 +14,10 @@ class MongoSave:
         mongoClient = pymongo.MongoClient(host="localhost", port=27017)
         Biogrid = mongoClient.Biogrid
         all = Biogrid['all']
-        # data={'test':'123'}
+        # data={'static':'123'}
         with open(filePath,'rb') as file:
             all.insert_many(file)
         mongoClient.close()
 
 if __name__ == "__main__":
-    MongoSave().mongo('./Biogrid_data/test.json')
+    MongoSave().mongo('./Biogrid_data/static.json')

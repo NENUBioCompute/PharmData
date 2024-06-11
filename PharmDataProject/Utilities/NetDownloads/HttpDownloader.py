@@ -22,7 +22,7 @@ class HTTP:
         return os.getpid()
 
     def GetData( url:str, local_path:str, file_name:str):
-        log_path = './test.log'
+        log_path = './static.log'
         logger = logging.getLogger('HttpDownloader')
         logger.setLevel(logging.INFO)
         fh = logging.FileHandler(log_path)

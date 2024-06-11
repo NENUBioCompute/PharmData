@@ -126,7 +126,7 @@ class TTdDownloader:
 
 
 if __name__ == '__main__':
-    # TtdDownloader().start(r'../../../conf/drugkb.config',  './test.log', '../../../data/ttd/target2drug.xlsx', '../../../data/ttd/target2drug.tsv')
+    # TtdDownloader().start(r'../../../conf/drugkb.config',  './static.log', '../../../data/ttd/target2drug.xlsx', '../../../data/ttd/target2drug.tsv')
     pass
     ttddownloader = TTdDownloader()
     ttddownloader.start()

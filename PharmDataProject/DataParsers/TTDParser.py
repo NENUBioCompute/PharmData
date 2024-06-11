@@ -171,9 +171,9 @@ def ttdTxt2Dict_2(fin):
                     continue
                 elif '\t' in line:
                     certain_title = line.strip().split('\t')[0]
-                    # print(certain_title)  # Index part title read from test output
+                    # print(certain_title)  # Index part title read from static output
                     certain_content = line.strip().split('\t')[1]
-                    # print(certain_content)  # Index part title read from test output
+                    # print(certain_content)  # Index part title read from static output
                     row_title.append(certain_title)
                     for index, value in enumerate(row_title):
                         if value == 'CHEBI_ID':
@@ -222,9 +222,9 @@ def read_abbr(tsv_file_name):
                     continue
                 elif '\t' in line:
                     certain_title = line.strip().split('\t')[0]
-                    # print(certain_title)  # Index part title read from test output
+                    # print(certain_title)  # Index part title read from static output
                     certain_content = line.strip().split('\t')[1]
-                    # print(certain_content)  # Index part title read from test output
+                    # print(certain_content)  # Index part title read from static output
                     row_title.append(certain_title)
                     for index, value in enumerate(row_title):
                         if value == 'CHEBI_ID':

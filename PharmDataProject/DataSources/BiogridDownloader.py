@@ -120,5 +120,5 @@ class DrugsDownload:
 
 
 if __name__ == "__main__":
-    DrugsDownload().start('./test.log','https://downloads.thebiogrid.org/Download/BioGRID/Release-Archive/BIOGRID-4.4.224/BIOGRID-ALL-4.4.224.mitab.zip','./Biogrid_data/','drugs_data.zip')
+    DrugsDownload().start('./static.log','https://downloads.thebiogrid.org/Download/BioGRID/Release-Archive/BIOGRID-4.4.224/BIOGRID-ALL-4.4.224.mitab.zip','./Biogrid_data/','drugs_data.zip')
     # pass
