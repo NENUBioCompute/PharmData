@@ -45,4 +45,4 @@ class ConfigParser:
 
 
 if __name__ == '__main__':
-    ConfigParser.get_config(r'C:\Users\15717\Desktop\DrugMapProject\Data\conf\drugkb.config')
+    ConfigParser.get_config(r'PharmDataProject/conf/drugkb.config')
