@@ -27,9 +27,9 @@ class ConfigParser:
             else:
                 return config
 
-    def __init__(self, path):
+    def __init__(self, path, section=None):
         self.config = self.get_config(path)
-        self.section = None
+        self.section = section
         if self.config is None:
             raise Exception("Config file not found")
 
@@ -45,4 +45,4 @@ class ConfigParser:
 
 
 if __name__ == '__main__':
-    ConfigParser.get_config(r'C:\Users\15717\Desktop\DrugMapProject\Data\conf\drugkb.config')
+    ConfigParser.get_config(r'PharmDataProject/conf/drugkb.config')

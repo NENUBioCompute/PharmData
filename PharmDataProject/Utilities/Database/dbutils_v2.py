@@ -71,7 +71,7 @@ class DBConnection:
             :param accelerate: enable multi-thread insert. Note that the insert action is unordered.
             :param counter: enable data count when is set True
         """
-        logging.info(f"Collection {self.collection_name} start conversion.")
+        logging.debug(f"Collection {self.collection_name} start conversion.")
         beginning_time = time.time()
         data_counter = 0
 
@@ -92,10 +92,10 @@ class DBConnection:
                 data_counter += len(buffer)
             buffer.clear()
         if counter:
-            logging.info(
+            logging.debug(
                 f"Collection {self.collection_name} conversion complete，Insert {data_counter} bar documents, time elapsed {time.time() - beginning_time:.2f}s")
         else:
-            logging.info(
+            logging.debug(
                 f"Collection {self.collection_name} conversion complete, time elapsed {time.time() - beginning_time:.2f}s")
 
     def __assure_empty(self, dbCheck: bool) -> None:
@@ -204,12 +204,8 @@ class DBConnection:
         else:
             return self.db[target_col].delete_one(query)
 
-    def update_one(self, query, update, target_col=""):
-        if not target_col:
-            return self.collection.update_one(query, update)
-        else:
-            return self.db[target_col].update_one(query, update)
-
+    def add_index(self, name, direction=pymongo.ASCENDING, is_unique=True):
+        self.collection.create_index([(name, direction)], unique=is_unique)
 
 if __name__ == "__main__":
     # The following is a usage example
