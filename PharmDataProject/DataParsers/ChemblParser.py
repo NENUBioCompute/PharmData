@@ -117,7 +117,8 @@ class ChemblParser:
                     LEFT JOIN compound_records cr ON a.record_id = cr.record_id 
                     LEFT JOIN molecule_dictionary md ON cr.molregno = md.molregno 
                     LEFT JOIN docs doc ON a.doc_id = doc.doc_id 
-                    WHERE ass.tid IN :ids
+                    WHERE ass.tid IN :ids 
+                    AND a.standard_value IS NOT NULL
                 """
         }
     }
@@ -335,9 +336,8 @@ class ChemblParser:
             component_groups = self._group_by_key(results['components'], 'tid')
             relation_groups = self._group_by_key(results['relationships'], 'tid')
             tissue_groups = self._group_by_key(results['tissues'], 'tid')
-            compound_groups = self._group_by_key(results['compounds'], 'tid')
+            # compound_groups = self._group_by_key(results['compounds'], 'tid')
 
-            # 合并到目标结构
             for tid, target in targets_map.items():
                 target.update({
                     'components': [{
@@ -364,16 +364,17 @@ class ChemblParser:
                         'efo_id': t['efo_id'],
                         'evidence': 'Assay data'
                     } for t in tissue_groups.get(tid, [])],
-                    'related_compounds': [{
-                        'compound_id': c['compound_id'],
-                        'name': c['compound_name'],
-                        'activity_type': c['standard_type'],
-                        'activity_value': c['standard_value'],
-                        'activity_units': c['standard_units'],
-                        'pchembl_value': c['pchembl_value'],
-                        'reference': f"PMID:{c['pubmed_id']}" if c['pubmed_id'] else None
-                    } for c in compound_groups.get(tid, [])]
                 })
+                # too many related compounds for mongodb to store (up to 1.8M records)
+                # target.update({'related_compounds': [{
+                #         'compound_id': c['compound_id'],
+                #         'name': c['compound_name'],
+                #         'activity_type': c['standard_type'],
+                #         'activity_value': c['standard_value'],
+                #         'activity_units': c['standard_units'],
+                #         'pchembl_value': c['pchembl_value'],
+                #         'reference': f"PMID:{c['pubmed_id']}" if c['pubmed_id'] else None
+                #     } for c in compound_groups.get(tid, [])]})
 
             yield list(targets_map.values())
 
