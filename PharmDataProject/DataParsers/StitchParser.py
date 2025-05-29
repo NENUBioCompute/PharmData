@@ -77,7 +77,7 @@ class StitchParser:
 
 
 if __name__ == "__main__":
-    cfg = "/home/zhaojingtong/tmpcode/PharmData/PharmDataProject/conf/drugkb.config"
+    cfg = "../conf/drugkb_test.config"
     config = ConfigParser(cfg)
     config.set_section("stitch")
     for i in StitchParser(config).start():

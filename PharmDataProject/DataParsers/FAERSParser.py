@@ -19,7 +19,7 @@ import os
 class FAERSParser:
     def __init__(self):
         self.config = configparser.ConfigParser()
-        self.config.read('../conf/drugkb.config')
+        self.config.read('../conf/drugkb_test.config')
         self.save_path = self.config.get('faers', 'data_path_1')
 
     def get_zip_file_path(self):
@@ -85,6 +85,7 @@ class FAERSParser:
     def parser_all_data(self):
         zip_file_paths = self.get_zip_file_path()
         for zip_file_path in zip_file_paths:
+            print(zip_file_path)
             try:
                 merged_data = self.faers_parse(zip_file_path)
             except Exception as e:
@@ -102,3 +103,5 @@ if __name__ == '__main__':
         for key, group in merged_data:
             data = {k: '' if pd.isna(v) else v for k, v in group.to_dict(orient='records')[0].items()}
             print(data)
+            break
+        break

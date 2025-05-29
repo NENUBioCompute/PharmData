@@ -235,7 +235,7 @@ if __name__ == '__main__':
                         format='%(asctime)s %(levelname)s %(message)s',
                         datefmt='%m/%d %I:%M:%S')
     icd11_parser = ICD11Parser()
-    cfg = "/home/zhaojingtong/tmpcode/PharmData/PharmDataProject/conf/drugkb.config"
+    cfg = "../conf/drugkb_test.config"
     config = ConfigParser(cfg)
     config.set_section("icd11")
     icd11_parser.start(config)

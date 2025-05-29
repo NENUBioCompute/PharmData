@@ -1,73 +1,61 @@
-"""
-  -*- encoding: utf-8 -*-
-  @Author: zhaojingtong
-  @Time  : 2023/10/15 18:41
-  @Email: 2665109868@qq.com
-  @function
-"""
-
-# -*- coding: utf-8 -*-
-""" Index dgidb dataset with MongoDB"""
-import argparse
 import os
-import sys
-import json
-from PharmDataProject.Utilities.Database.dbutils import DBconnection
 import configparser
-def mkpath(path):
-    if not os.path.exists(path):
-        os.mkdir(path)
-        return path
-    else:
-        return path
 
-def parse(data_path, json_path):
-    file = os.path.join(data_path, os.listdir(data_path)[0])
-    read_file = open(file, 'r').readlines()
+class DGIDBParser:
+    def __init__(self, config_path='../conf/drugkb_test.config'):
+        self.config = configparser.ConfigParser()
+        self.config.read(config_path)
+        self.data_paths = [self.config.get('dgidb', f'data_path_{i + 1}') for i in range(int(self.config.get('dgidb', 'data_path_num')))]
 
-    # parse dgi
-    get_dict = {}
-    keys = read_file[0].strip('\n').split('\t')
-    for index, line in enumerate(read_file[1:]):
-        values = line.strip('\n').split('\t')
-        # get_dict[index] = {keys[i]: values[i] for i in range(len(keys))}
-        data = {keys[i]: values[i] for i in range(len(keys))}
-        # print(data)
-        db.collection.insert_one(data)
+    def parse(self, data_path):
+        file_list = os.listdir(data_path)
+        if not file_list:
+            print("No files found in the directory:", data_path)
+            return []
 
-    # write to json
-    # json_file_path = mkpath(json_path) + json_path.split('/')[-2] + '.json'
-    # with open(json_file_path, "w", encoding="utf-8") as jf:
-    #     jf.write(json.dumps(get_dict, indent=4))
+        file_path = os.path.join(data_path, file_list[0])
+        print(f"Reading file: {file_path}")
 
+        try:
+            with open(file_path, 'r', encoding='utf-8') as file:
+                lines = file.readlines()
+        except UnicodeDecodeError:
+            print(f"Failed to read file with utf-8 encoding: {file_path}")
+            try:
+                with open(file_path, 'r', encoding='latin1') as file:
+                    lines = file.readlines()
+            except UnicodeDecodeError:
+                print(f"Failed to read file with latin1 encoding: {file_path}")
+                return []
 
-def to_mongo(json_path, db):
-    json_file_path = mkpath(json_path) + json_path.split('/')[-2] + '.json'
+        if not lines:
+            print(f"No content found in the file: {file_path}")
+            return []
 
-    if not os.path.exists(json_file_path):
-        print("dgidb file not find !")
-        sys.exit()
-    else:
-        with open(json_file_path, 'r', encoding="utf-8") as jf:
-            data = [value for value in json.load(jf).values()]
-            db.collection.insert_many(data)
+        keys = lines[0].strip().split('\t')
+        parsed_data = []
+        for line in lines[1:]:
+            values = line.strip().split('\t')
+            # 确保每个键都有值，使用 None 填充缺失的值
+            data_dict = {keys[i]: (values[i] if i < len(values) else None) for i in range(len(keys))}
+            parsed_data.append(data_dict)
+
+        return parsed_data  # 返回解析的数据字典列表
+
+    def test(self):
+        all_data = []
+        for data_path in self.data_paths:
+            print(f"Processing data path: {data_path}")
+            data = self.parse(data_path)
+            if data:
+                all_data.append(data[0])  # 只保存每个文件的第一个条目
+            else:
+                print("No data parsed.")
+        return all_data
 
 
 if __name__ == '__main__':
-
-    config = configparser.ConfigParser()
-    cfgfile = '../conf/drugkb.config'
-    config.read(cfgfile)
-
-    # parse
-    for i in range(0, int(config.get('dgidb', 'data_path_num'))):  # (0, 4)
-        db = DBconnection(cfgfile, config.get('dgidb', 'db_name'),config.get('dgidb', 'col_name_' + str(i + 1)))
-        parse(config.get('dgidb', 'data_path_' + str(i + 1)),config.get('dgidb', 'json_path_' + str(i + 1)))
-
-    # to_mongo
-    # for i in range(0, int(config.get('dgidb', 'json_path_num'))):  # (0, 4)
-    #     db = DBconnection(cfgfile, config.get('dgidb', 'db_name'),
-    #                       config.get('dgidb', 'col_name_' + str(i + 1)))
-    #     print(db.collection)
-    #     to_mongo(config.get('dgidb', 'json_path_' + str(i + 1)), db)
-    #
+    parser = DGIDBParser()
+    test_all_parsed_data = parser.test()
+    for data in test_all_parsed_data:
+        print(data)  # 打印每个数据路径解析出的第一个条目

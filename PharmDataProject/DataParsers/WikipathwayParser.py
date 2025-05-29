@@ -4,78 +4,59 @@
 # @Email   : sunzh857@nenu.edu.cn
 # @File    : Wikipathway_Parser.py
 # @Software: PyCharm
-import argparse
+
 import gzip
-import json
 import os
 import re
-import time
-import pymongo
 from xml.etree.ElementTree import fromstring
 from zipfile import ZipFile
 from xmljson import yahoo
-from PharmDataProject.Utilities.Database.dbutils import DBconnection
 import configparser
-class WikipathwayParser:
-    def __init__(self,config,database_name):
 
-        self.dbc =  DBconnection(cfgfile, config.get(database_name, 'db_name'),
-                      config.get(database_name, 'col_name_1'))
-    # Read WikiPathways xml file, index using the function indexf
-    # If the input file is a folder iterate over files in the folder
-    def read_and_index_pathways(self,infile, index):
-        # (infile,  WikipathwayParser.mongodb_index_pathway, index)
-        i = 0
-        t1 = time.time()
+
+def _strip_namespace(xml):
+    return re.sub(' xmlns="[^"]+"', '', xml, count=1)
+
+
+class WikipathwayParser:
+    def __init__(self, config, section_name):
+        self.config = config
+        self.section_name = section_name
+
+    def read_and_index_pathways(self, infile):
         if os.path.isdir(infile):
             for child in os.listdir(infile):
                 c = os.path.join(infile, child)
                 if child.endswith(".zip"):
-                    i += self.read_and_index_wikipathways_zipfile(c,index)
+                    yield from self.read_and_index_wikipathways_zipfile(c)
                 else:
-                    self.read_and_index_wikipathways_file(c, index)
-                    i += 1
+                    yield from self.read_and_index_wikipathways_file(c)
         elif infile.endswith(".zip"):
-            i += self.read_and_index_wikipathways_zipfile(infile,index)
+            yield from self.read_and_index_wikipathways_zipfile(infile)
         else:
-            self.read_and_index_wikipathways_file(infile, index)
-            i = 1
-        t2 = time.time()
-        #print("-- %d files have been processed, in %dms" % (i, (t2 - t1) * 1000))
-        return None
+            yield from self.read_and_index_wikipathways_file(infile)
 
-    # TODO: remove 'Graphics' and 'GraphId' elements
-    # Read WikiPathways zipfile, index using the function indexf
-    def read_and_index_wikipathways_zipfile(self, zipfile, index):
-        i = 0
+    def read_and_index_wikipathways_zipfile(self, zipfile):
         with ZipFile(zipfile) as myzip:
             for fname in myzip.namelist():
-                #print("Reading %s " % fname)
                 with myzip.open(fname) as jfile:
                     xml = jfile.read()
                     if not isinstance(xml, str):
                         xml = xml.decode('utf-8')
-                    r = self.read_and_index_wikipathways_xml(xml, index)
-                    i += r
-        return i
+                    yield from self.read_and_index_wikipathways_xml(xml)
 
-    # Read WikiPathways file, index using the function indexf
-    def read_and_index_wikipathways_file(self,infile, index):
-        infile = str(infile)
-        #print("Reading %s " % infile)
+    def read_and_index_wikipathways_file(self, infile):
         if infile.endswith(".gz"):
-            f = gzip.open(infile, 'rt')
+            with gzip.open(infile, 'rt') as f:
+                xmls = f.read()
         else:
-            f = open(infile, 'r')
-        xmls = f.read()
-        r = self.read_and_index_wikipathways_xml(xmls, index)
-        return r
+            with open(infile, 'r') as f:
+                xmls = f.read()
+        yield from self.read_and_index_wikipathways_xml(xmls)
 
-    # Index WikiPathways xml using the function indexf
-    def read_and_index_wikipathways_xml(self,xml,index):
-        xml = re.sub(' xmlns="[^"]+"', '', xml, count=1)
+    def read_and_index_wikipathways_xml(self, xml):
+        xml = _strip_namespace(xml)
         pathway = yahoo.data(fromstring(xml))["Pathway"]
-        # Delete fields that would normally be used for rendering images
         for a in ["Biopax", "BiopaxRef", "Graphics", "Shape", "Group", "InfoBox"]:
             if a in pathway:
                 del pathway[a]
@@ -84,26 +65,26 @@ class WikipathwayParser:
                 for i in pathway[a]:
                     if isinstance(i, str):
                         continue
-                    del i["Graphics"]
+                    if "Graphics" in i:
+                        del i["Graphics"]
                     if "GraphId" in i:
                         del i["GraphId"]
-        r = self.mongodb_index_pathway(pathway)
-        return r
-
-
-    def mongodb_index_pathway(self,ba):
-
-
-        self.dbc.collection.insert_one(ba)
-        r = 1
-        return r
+        yield pathway
 
 
 if __name__ == '__main__':
     config = configparser.ConfigParser()
-    cfgfile = '../conf/drugkb.config'
+    cfgfile = '../conf/drugkb_test.config'
     config.read(cfgfile)
+    infile = os.path.join(config.get('wikipathway', 'data_path_1'), 'wikipathways-20231010-gpml-Homo_sapiens.zip')
 
-
-    k = WikipathwayParser(config, 'wikipathway')
-    k.read_and_index_pathways('/home/zhaojingtong/pharmrg/pharmrg_data/wikipathway/wikipathways-20231010-gpml-Homo_sapiens.zip', None)
+    parser = WikipathwayParser(config, 'wikipathway')
+    print(f"Processing file: {infile}")
+    for root, dirs, files in os.walk(os.path.dirname(infile)):
+        for f in files:
+            fi = os.path.join(root, f)
+            print(f"Processing file: {fi}")
+            for record in parser.read_and_index_pathways(fi):
+                print("First record parsed:", record)
+                break
+            break

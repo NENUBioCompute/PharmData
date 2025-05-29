@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="c2ea8d95-5b00-40bb-9c7f-c3cf0c0a4ed8" name="pharmrg_cc">
+        <fileTransfer rootFolder="/home/zhaojingtong" accessType="SFTP" host="59.73.198.168" port="22" sshConfigId="a0d8e2cc-7cfb-4212-a2b6-420f59d2c386" sshConfig="zhaojingtong@59.73.198.168:22 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

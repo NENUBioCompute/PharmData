@@ -12,9 +12,10 @@ import pandas as pd
 class FAERStoMongo:
     def __init__(self):
         self.config = configparser.ConfigParser()
-        self.config.read('../conf/drugkb.config')
+        self.cfgfile = '../conf/drugkb_test.config'
+        self.config.read(self.cfgfile)
         self.save_path = self.config.get('faers', 'data_path_1')
-        self.cfgfile = '../conf/drugkb.config'
+
         self.config.read(self.cfgfile)
 
     def save_to_Mongodb(self):

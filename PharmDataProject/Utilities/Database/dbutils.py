@@ -44,7 +44,7 @@ class DBconnection(object):
 if __name__ == '__main__':
 
     # usage
-    cfgfile = '../conf/drugkb.config'
+    cfgfile = '../conf/drugkb_test.config'
     db = DBconnection(cfgfile, 'DrugKB', 'source_drugbank')
     # print('connected!')
     # db.collection.insert_one({"name":"zhangsan","age":18})
